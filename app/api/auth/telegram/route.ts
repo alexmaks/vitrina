@@ -65,10 +65,89 @@ async function verifyTelegramHash(
   return diff === 0
 }
 
+// Общая логика авторизации (используется и в POST и в GET)
+async function handleAuth(data: Record<string, string>): Promise<{
+  redirectUrl: string
+  token: string
+} | { error: string; status: number }> {
+  const { hash, ...rest } = data
+  if (!hash) return { error: 'Missing hash', status: 400 }
+
+  if (!(await verifyTelegramHash(rest, hash))) {
+    return { error: 'Invalid hash', status: 401 }
+  }
+
+  const authDate = parseInt(rest.auth_date ?? '0', 10)
+  if (Date.now() / 1000 - authDate > 86400) {
+    return { error: 'Auth data expired', status: 401 }
+  }
+
+  const telegramId = parseInt(rest.id, 10)
+  const username = rest.username ?? null
+  const firstName = rest.first_name ?? null
+
+  const supabase = createSupabaseAdminClient()
+  const { data: merchant, error } = await supabase
+    .from('merchants')
+    .upsert(
+      {
+        telegram_id: telegramId,
+        telegram_username: username,
+        telegram_first_name: firstName,
+        contact_telegram: username ?? String(telegramId),
+      },
+      { onConflict: 'telegram_id', ignoreDuplicates: false },
+    )
+    .select('id, slug, is_published')
+    .single()
+
+  if (error || !merchant) {
+    console.error('Supabase upsert error:', error)
+    return { error: 'Database error', status: 500 }
+  }
+
+  const isNew = !merchant.slug || !merchant.is_published
+  const redirectUrl = isNew ? '/admin/setup' : '/admin/products'
+
+  const token = await signSession({
+    merchantId: merchant.id,
+    telegramId,
+    slug: merchant.slug ?? null,
+  })
+
+  return { redirectUrl, token }
+}
+
+// GET — для мобильных устройств (Telegram redirect mode)
+export async function GET(request: Request) {
+  const url = new URL(request.url)
+  const params: Record<string, string> = {}
+  url.searchParams.forEach((value, key) => { params[key] = value })
+
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
+  if (!checkRateLimit(ip)) {
+    return NextResponse.redirect(new URL('/login?error=rate_limit', request.url))
+  }
+
+  const result = await handleAuth(params)
+  if ('error' in result) {
+    return NextResponse.redirect(new URL('/login?error=auth_failed', request.url))
+  }
+
+  const domain = process.env.NEXT_PUBLIC_DOMAIN ?? ''
+  const response = NextResponse.redirect(new URL(result.redirectUrl, domain || request.url))
+  response.cookies.set(SESSION_COOKIE, result.token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: SESSION_MAX_AGE,
+    path: '/',
+  })
+  return response
+}
+
 export async function POST(request: Request) {
-  // Rate limit по IP
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0].trim() ?? 'unknown'
   if (!checkRateLimit(ip)) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
@@ -80,63 +159,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { hash, ...rest } = body
-  if (!hash) {
-    return NextResponse.json({ error: 'Missing hash' }, { status: 400 })
+  const result = await handleAuth(body)
+  if ('error' in result) {
+    return NextResponse.json({ error: result.error }, { status: result.status })
   }
 
-  // Проверяем подпись Telegram
-  if (!(await verifyTelegramHash(rest, hash))) {
-    return NextResponse.json({ error: 'Invalid hash' }, { status: 401 })
-  }
-
-  // Проверяем свежесть данных (не старше 24 часов)
-  const authDate = parseInt(rest.auth_date ?? '0', 10)
-  if (Date.now() / 1000 - authDate > 86400) {
-    return NextResponse.json({ error: 'Auth data expired' }, { status: 401 })
-  }
-
-  const telegramId = parseInt(rest.id, 10)
-  const username = rest.username ?? null
-  const firstName = rest.first_name ?? null
-
-  // UPSERT мастера в Supabase
-  const supabase = createSupabaseAdminClient()
-  const { data: merchant, error } = await supabase
-    .from('merchants')
-    .upsert(
-      {
-        telegram_id: telegramId,
-        telegram_username: username,
-        telegram_first_name: firstName,
-        contact_telegram: username ?? String(telegramId),
-      },
-      {
-        onConflict: 'telegram_id',
-        ignoreDuplicates: false,
-      },
-    )
-    .select('id, slug, is_published')
-    .single()
-
-  if (error || !merchant) {
-    console.error('Supabase upsert error:', error)
-    return NextResponse.json({ error: 'Database error' }, { status: 500 })
-  }
-
-  // Определяем куда перенаправить
-  const isNew = !merchant.slug || !merchant.is_published
-  const redirectUrl = isNew ? '/admin/setup' : '/admin/products'
-
-  // Создаём и устанавливаем сессионную cookie
-  const token = await signSession({
-    merchantId: merchant.id,
-    telegramId,
-    slug: merchant.slug ?? null,
-  })
-
-  const response = NextResponse.json({ redirectUrl })
-  response.cookies.set(SESSION_COOKIE, token, {
+  const response = NextResponse.json({ redirectUrl: result.redirectUrl })
+  response.cookies.set(SESSION_COOKIE, result.token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
