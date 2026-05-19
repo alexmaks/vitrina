@@ -92,7 +92,7 @@ export default async function HomePage() {
           </h2>
           <p className="mb-4 text-sm text-[#6B6B6B]">{STRINGS.homeContactText}</p>
           <a
-            href="https://t.me/alexmaks"
+            href="https://t.me/Alex_gypsies"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-[48px] items-center gap-2 rounded-2xl bg-[#2AABEE] px-5 font-semibold text-white transition-opacity hover:opacity-90 active:opacity-75"
