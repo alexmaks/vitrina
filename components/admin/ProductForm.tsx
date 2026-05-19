@@ -50,6 +50,10 @@ export default function ProductForm({
   const [deleting, setDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Стабильный ID для загрузки изображения нового товара
+  // Для существующих товаров используем реальный productId
+  const uploadId = useRef<string>(productId ?? crypto.randomUUID())
+
   const {
     register,
     handleSubmit,
@@ -80,7 +84,7 @@ export default function ProductForm({
     const fd = new FormData()
     fd.append('file', file)
     fd.append('type', 'product')
-    fd.append('productId', productId ?? 'new')
+    fd.append('productId', uploadId.current)
 
     try {
       const res = await fetch('/api/upload', { method: 'POST', body: fd })
