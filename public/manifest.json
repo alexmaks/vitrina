@@ -1,0 +1,40 @@
+{
+  "name": "Витрина в кармане",
+  "short_name": "Витрина",
+  "description": "Управляйте своей витриной с телефона",
+  "start_url": "/admin",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAFAF7",
+  "theme_color": "#854F0B",
+  "lang": "ru",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["shopping", "business"],
+  "shortcuts": [
+    {
+      "name": "Мои товары",
+      "url": "/admin/products",
+      "description": "Управление каталогом"
+    }
+  ]
+}
