@@ -1,0 +1,34 @@
+slug: cake-anna
+name: Тортики Анны
+tagline: Домашняя выпечка на заказ, г. Москва
+avatar: /avatars/cake-anna.webp
+telegram: your_telegram
+accentColor: "#7C3A62"
+
+products:
+  - id: honey
+    name: Медовик классический
+    price: 2400
+    image: /products/cake-anna/honey.webp
+    discount: 15
+  - id: napoleon
+    name: Наполеон с заварным
+    price: 2600
+    image: /products/cake-anna/napoleon.webp
+  - id: red-velvet
+    name: Красный бархат
+    price: 3200
+    image: /products/cake-anna/red-velvet.webp
+    discount: 10
+  - id: chocolate
+    name: Шоколадный фондан
+    price: 2800
+    image: /products/cake-anna/chocolate.webp
+  - id: berry
+    name: Ягодный со сливками
+    price: 3500
+    image: /products/cake-anna/berry.webp
+  - id: caramel
+    name: Карамельный с орехами
+    price: 3100
+    image: /products/cake-anna/caramel.webp

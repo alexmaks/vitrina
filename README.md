@@ -1,36 +1,121 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Витрина-в-кармане
 
-## Getting Started
+> Прототип этапа 0 (консьерж) — статическая мобильная витрина для мастеров.
 
-First, run the development server:
+Мастер делится одной ссылкой, клиент видит каталог товаров и пишет напрямую в Telegram.
+
+## Быстрый старт
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Структура проекта
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+app/               # Next.js App Router
+  layout.tsx       # Корневой layout, Yandex Metrika
+  page.tsx         # Главная страница (визитка проекта)
+  [slug]/page.tsx  # Витрина мастера
+components/        # UI-компоненты
+data/merchants/    # YAML-данные мастеров (по одному файлу на мастера)
+lib/               # Типы, парсер YAML, строки UI
+public/
+  avatars/         # Аватары мастеров
+  products/        # Фото товаров (по папке на мастера)
+  og/              # OG-картинки 1200×630 для превью
+scripts/           # Вспомогательные скрипты (генерация OG)
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Добавить нового мастера
 
-## Learn More
+1. Создай файл `data/merchants/{slug}.yaml` по образцу:
 
-To learn more about Next.js, take a look at the following resources:
+```yaml
+slug: my-master
+name: Название магазина
+tagline: Короткое описание
+avatar: /avatars/my-master.jpg
+telegram: username_bez_sobaki
+accentColor: "#3B82F6"   # опционально
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Общая распродажа (опционально)
+sale:
+  percent: 15
+  until: "2026-12-31"
+  text: "Скидка -15% на всё"
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+products:
+  - id: product1
+    name: Название товара
+    price: 1500
+    image: /products/my-master/product1.jpg
+    discount: 20   # скидка на конкретный товар (опционально)
+```
 
-## Deploy on Vercel
+2. Положи фото в `public/products/{slug}/` и аватар в `public/avatars/`
+3. Сгенерируй OG-картинку: `node scripts/generate-og.mjs`
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Переменные окружения
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+| Переменная | Описание | Обязательна |
+|---|---|---|
+| `NEXT_PUBLIC_YANDEX_METRIKA_ID` | ID счётчика Яндекс.Метрики | Нет |
+| `NEXT_PUBLIC_DOMAIN` | Домен деплоя (для OG-тегов) | Рекомендуется |
+
+Создай `.env.local`:
+```env
+NEXT_PUBLIC_YANDEX_METRIKA_ID=12345678
+NEXT_PUBLIC_DOMAIN=https://vitrina.vercel.app
+```
+
+## Сборка
+
+```bash
+npm run build   # генерирует статику в /out
+```
+
+## Деплой на Vercel
+
+1. Создай аккаунт на [vercel.com](https://vercel.com)
+2. Подключи GitHub-репозиторий
+3. Настройки сборки подхватятся автоматически (`output: 'export'`)
+4. Добавь переменные окружения в Project Settings → Environment Variables:
+   - `NEXT_PUBLIC_YANDEX_METRIKA_ID`
+   - `NEXT_PUBLIC_DOMAIN` (например, `https://vitrina.vercel.app`)
+5. Нажми Deploy
+
+Либо через CLI:
+```bash
+npm i -g vercel
+vercel --prod
+```
+
+## Деплой на Cloudflare Pages (резервный вариант)
+
+1. В Cloudflare Dashboard → Pages → Create Project
+2. Подключи GitHub-репозиторий
+3. Настройки:
+   - **Build command:** `npm run build`
+   - **Output directory:** `out`
+4. В Environment Variables добавь:
+   - `NEXT_PUBLIC_YANDEX_METRIKA_ID`
+   - `NEXT_PUBLIC_DOMAIN`
+5. Нажми Save and Deploy
+
+## Настройка Yandex Metrika
+
+1. Зарегистрируйся на [metrika.yandex.ru](https://metrika.yandex.ru)
+2. Создай счётчик, включи **Вебвизор** и **Карту кликов**
+3. Скопируй ID счётчика в `NEXT_PUBLIC_YANDEX_METRIKA_ID`
+4. В счётчике будут автоматически отслеживаться события:
+   - `contact_click` — клик по кнопке «Написать мастеру»
+
+## Критерии приёмки
+
+- [ ] `npm run build` — без ошибок
+- [ ] Открыть `/baba-zina` на мобильном — корректная вёрстка
+- [ ] Кнопка «Написать мастеру» → открывает Telegram с правильным username
+- [ ] Ссылка в Telegram → превью с картинкой и описанием
+- [ ] Lighthouse Performance ≥ 95, Accessibility ≥ 95, SEO ≥ 95

@@ -1,0 +1,24 @@
+slug: flowers-lena
+name: Букеты от Лены
+tagline: Авторская флористика, г. Санкт-Петербург
+avatar: /avatars/flowers-lena.webp
+telegram: your_telegram
+accentColor: "#2D6A4F"
+
+products:
+  - id: spring
+    name: Весенний микс
+    price: 1800
+    image: /products/flowers-lena/spring.webp
+  - id: roses
+    name: Розы кустовые
+    price: 2200
+    image: /products/flowers-lena/roses.webp
+  - id: wildflowers
+    name: Полевые цветы
+    price: 1500
+    image: /products/flowers-lena/wildflowers.webp
+  - id: peony
+    name: Пионы нежные
+    price: 3200
+    image: /products/flowers-lena/peony.webp

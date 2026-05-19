@@ -1,0 +1,47 @@
+slug: baba-zina
+name: Носки от бабы Зины
+tagline: Ручная вязка, г. Пермь
+avatar: /avatars/baba-zina.webp
+telegram: Alex_gypsies
+accentColor: "#854F0B"
+
+sale:
+  percent: 20
+  until: "2026-08-31"
+  text: "Летняя распродажа -20% на всё"
+
+products:
+  - id: winter
+    name: Зимние тёплые
+    price: 750
+    image: /products/baba-zina/winter.webp
+    discount: 20
+  - id: zaika
+    name: Домашние «зайчик»
+    price: 800
+    image: /products/baba-zina/zaika.webp
+    discount: 50
+  - id: stars
+    name: Нарядные узорные
+    price: 1100
+    image: /products/baba-zina/stars.webp
+  - id: fur
+    name: С мехом овечьим
+    price: 1300
+    image: /products/baba-zina/fur.webp
+  - id: cotton
+    name: Летние хлопковые
+    price: 650
+    image: /products/baba-zina/cotton.webp
+  - id: kids
+    name: Детские яркие
+    price: 550
+    image: /products/baba-zina/kids.webp
+  - id: sport
+    name: Спортивные высокие
+    price: 900
+    image: /products/baba-zina/sport.webp
+  - id: classic
+    name: Классические белые
+    price: 700
+    image: /products/baba-zina/classic.webp

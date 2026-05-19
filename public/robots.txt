@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://vitrina-kappa.vercel.app/sitemap.xml
