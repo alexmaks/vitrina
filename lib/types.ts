@@ -34,6 +34,7 @@ export interface Product {
   description?: string         // описание (опционально)
   discountPercent?: number     // итоговый процент скидки (свой или из sale)
   discountedPrice?: number     // цена со скидкой
+  isAvailable: boolean         // наличие товара
 }
 
 export interface Sale {

@@ -59,7 +59,6 @@ function mapRow(row: MerchantRow): Merchant {
       : undefined
 
   const products: Product[] = (row.products ?? [])
-    .filter((p) => p.is_available)
     .sort((a, b) => a.sort_order - b.sort_order)
     .map((p) => {
       const discountPercent =
@@ -76,6 +75,7 @@ function mapRow(row: MerchantRow): Merchant {
         description: p.description ?? undefined,
         discountPercent,
         discountedPrice,
+        isAvailable: p.is_available,
       }
     })
 

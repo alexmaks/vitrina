@@ -45,6 +45,7 @@ async function updateProduct(formData: FormData) {
   if (merchant?.slug) {
     revalidatePath(`/${merchant.slug}`)
   }
+  revalidatePath('/admin/products')
 
   redirect('/admin/products')
 }

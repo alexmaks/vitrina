@@ -54,6 +54,7 @@ function parseMerchant(filePath: string): Merchant {
       image: p.image,
       discountPercent,
       discountedPrice,
+      isAvailable: true,
     }
   })
 
