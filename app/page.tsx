@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { verifySession, SESSION_COOKIE } from '@/lib/session'
 import { STRINGS } from '@/lib/strings'
 
 export const metadata: Metadata = {
@@ -9,30 +11,14 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 }
 
-// Обновляем раз в час
 export const revalidate = 3600
 
-function ArrowRightIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-async function getPublishedMerchants() {
-  const supabase = await createSupabaseServerClient()
-  const { data } = await supabase
-    .from('merchants')
-    .select('slug, name, tagline')
-    .eq('is_published', true)
-    .order('created_at', { ascending: false })
-    .limit(20)
-  return data ?? []
-}
-
 export default async function HomePage() {
-  const merchants = await getPublishedMerchants()
+  // Если уже залогинен — сразу в админку
+  const cookieStore = await cookies()
+  const token = cookieStore.get(SESSION_COOKIE)?.value
+  const session = token ? await verifySession(token) : null
+  if (session) redirect('/admin/products')
 
   return (
     <div className="page-container flex min-h-svh flex-col">
@@ -58,32 +44,6 @@ export default async function HomePage() {
             Создать витрину
           </Link>
         </section>
-
-        {/* Витрины */}
-        {merchants.length > 0 && (
-          <section className="mb-10">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#9A9A9A]">
-              {STRINGS.homeDemosTitle}
-            </h2>
-            <div className="flex flex-col gap-2.5">
-              {merchants.map((merchant) => (
-                <Link
-                  key={merchant.slug}
-                  href={`/${merchant.slug}`}
-                  className="flex min-h-[56px] items-center justify-between rounded-2xl border border-[#E5E5E0] bg-white px-4 py-3 transition-colors hover:border-[#C8C8C0] active:bg-[#F0F0EC]"
-                >
-                  <div>
-                    <p className="font-semibold text-[#1A1A1A]">{merchant.name}</p>
-                    <p className="text-sm text-[#9A9A9A]">{merchant.tagline}</p>
-                  </div>
-                  <span className="text-[#9A9A9A]">
-                    <ArrowRightIcon />
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* Контакт автора */}
         <section className="mt-auto">
