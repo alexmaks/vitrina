@@ -133,11 +133,10 @@ async function migrateMerchant(yamlFile) {
     let imageUrl = null
     if (p.image) {
       const localImg = path.join(PUBLIC_DIR, p.image.replace(/^\//, ''))
-      imageUrl = await uploadLocalImage(localImg, 'products', `${merchant.id}/${p.id}.webp`)
+      imageUrl = await uploadLocalImage(localImg, 'products', `${merchant.id}/${i}.webp`)
     }
 
     const { error: productError } = await supabase.from('products').insert({
-      id: p.id,
       merchant_id: merchant.id,
       name: p.name,
       price: p.price,

@@ -10,9 +10,8 @@ interface PageProps {
   params: Promise<{ slug: string }>
 }
 
-// Только явный revalidatePath — без автоматического TTL
-export const revalidate = false
-export const dynamic = 'force-static'
+// Обновляем страницу каждые 60 секунд (ISR)
+export const revalidate = 60
 
 // Генерируем статические маршруты из Supabase
 export async function generateStaticParams() {
