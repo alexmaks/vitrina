@@ -220,7 +220,8 @@ curl -X POST https://vitrina-kappa.vercel.app/api/revalidate \
 ### Настройка вебхука бота (одноразово, или после смены домена)
 
 ```bash
-curl "https://api.telegram.org/botREDACTED/setWebhook?url=https://vitrina-kappa.vercel.app/api/bot/telegram"
+# Взять BOT_TOKEN из .env.local / Vercel env vars
+curl "https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=https://vitrina-kappa.vercel.app/api/bot/telegram&secret_token=<TELEGRAM_WEBHOOK_SECRET>"
 ```
 
 Ожидаемый ответ: `{"ok":true,"result":true}`
@@ -245,6 +246,29 @@ curl "https://api.telegram.org/botREDACTED/setWebhook?url=https://vitrina-kappa.
 
 ---
 
+## Аудит безопасности (проведён 2026-05-20)
+
+### Исправлено
+
+| # | Файл | Проблема | Решение |
+|---|---|---|---|
+| КРИТ-2 | `api/bot/telegram/route.ts` | Webhook без проверки источника | Добавлена проверка `X-Telegram-Bot-Api-Secret-Token` |
+| ВАЖН-2 | `api/auth/telegram/route.ts` | Окно `auth_date` 24ч (рекомендация Telegram — 1ч) | Сужено до 3600 сек |
+| ВАЖН-5 | `api/admin/sale/route.ts` | `request.json()` без `try/catch` | Добавлен `try/catch` |
+| ВАЖН-8 | `api/bot/telegram/route.ts` | Production домен захардкожен в коде | Бросает ошибку при отсутствии `NEXT_PUBLIC_DOMAIN` |
+| ЗАМ-2/3 | `lib/session.ts`, `lib/magic-link.ts` | `btoa` не поддерживает Unicode (кириллица в slug) | Заменён на `btoa(unescape(encodeURIComponent(...)))` |
+| ЗАМ-4 | `next.config.ts` | Wildcard `*.supabase.co` слишком широк | Указан конкретный hostname проекта |
+| ЗАМ-7 | `api/revalidate/route.ts` | slug не валидируется перед `revalidatePath` | Добавлен `isSlugValid()` |
+
+### Требует инфраструктуры (отложено)
+
+| # | Проблема | Что нужно |
+|---|---|---|
+| КРИТ-1 | Magic-link можно использовать дважды (replay attack) | Redis/Upstash для хранения использованных `jti` |
+| КРИТ-3 | In-memory rate limiter сбрасывается при cold-start | Redis/Upstash с атомарным `INCR`/`EXPIRE` |
+
+---
+
 ## Откат к предыдущей версии
 
 ```bash
@@ -259,19 +283,4 @@ vercel --prod --yes
 
 # Вернуться обратно на актуальную версию
 git checkout main
-```
-
-### Хэши коммитов (от новых к старым)
-
-```
-76eff72  fix: logout редиректит на текущий домен
-40f1950  feat: вход через бота для мобильных (magic link)
-b00d696  fix: поддержка Telegram Login Widget на мобильных
-833c775  chore: убрана суперадмин страница
-714d782  feat: товары "нет в наличии" с бейджем
-dddd66b  fix: уникальный ID для загрузки изображений
-6946094  fix: контакт автора → @Alex_gypsies
-8a22ce5  fix: ISR revalidate 60s, ссылка автора, id товаров
-6a1efe7  feat: этап 1 — PWA-админка + Supabase (основной коммит)
-348dc14  Initial commit from Create Next App
 ```
