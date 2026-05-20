@@ -19,11 +19,12 @@ NEXT_PUBLIC_YANDEX_METRIKA_ID=109276332
 NEXT_PUBLIC_DOMAIN=https://vitrina-kappa.vercel.app
 NEXT_PUBLIC_TELEGRAM_BOT_USERNAME=vitrina_kappa_bot
 TELEGRAM_BOT_USERNAME=vitrina_kappa_bot
-TELEGRAM_BOT_TOKEN=REDACTED
+TELEGRAM_BOT_TOKEN=<хранится в Vercel и .env.local — не коммитить>
 NEXT_PUBLIC_SUPABASE_URL=https://bhiociladvlrliwncloi.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=REDACTED
-SUPABASE_SERVICE_ROLE_KEY=REDACTED
-SESSION_SECRET=REDACTED
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<хранится в Vercel и .env.local — не коммитить>
+SUPABASE_SERVICE_ROLE_KEY=<хранится в Vercel и .env.local — не коммитить>
+SESSION_SECRET=<хранится в Vercel и .env.local — не коммитить>
+TELEGRAM_WEBHOOK_SECRET=<хранится в Vercel и .env.local — не коммитить>
 ```
 
 > ⚠️ В Vercel переменная `NEXT_PUBLIC_DOMAIN` может быть устаревшей (`vitrina-2ohm.vercel.app`) — нужно обновить вручную в дашборде на `https://vitrina-kappa.vercel.app`.
