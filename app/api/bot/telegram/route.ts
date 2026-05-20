@@ -3,7 +3,8 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { signMagicToken } from '@/lib/magic-link'
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? ''
-const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN ?? 'https://vitrina-kappa.vercel.app'
+const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN
+if (!DOMAIN) throw new Error('NEXT_PUBLIC_DOMAIN is not set')
 
 async function sendMessage(chatId: number, text: string, replyMarkup?: object) {
   await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -19,6 +20,15 @@ async function sendMessage(chatId: number, text: string, replyMarkup?: object) {
 }
 
 export async function POST(request: Request) {
+  // КРИТ-2: проверяем что запрос действительно от Telegram
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET
+  if (webhookSecret) {
+    const incoming = request.headers.get('x-telegram-bot-api-secret-token')
+    if (incoming !== webhookSecret) {
+      return NextResponse.json({ ok: false }, { status: 403 })
+    }
+  }
+
   let body: Record<string, unknown>
   try {
     body = await request.json()

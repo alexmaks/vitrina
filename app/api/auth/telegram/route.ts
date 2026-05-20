@@ -77,8 +77,10 @@ async function handleAuth(data: Record<string, string>): Promise<{
     return { error: 'Invalid hash', status: 401 }
   }
 
-  const authDate = parseInt(rest.auth_date ?? '0', 10)
-  if (Date.now() / 1000 - authDate > 86400) {
+  // Не старше 1 часа (рекомендация Telegram, было 24ч)
+  if (!rest.auth_date) return { error: 'Missing auth_date', status: 400 }
+  const authDate = parseInt(rest.auth_date, 10)
+  if (Date.now() / 1000 - authDate > 3600) {
     return { error: 'Auth data expired', status: 401 }
   }
 

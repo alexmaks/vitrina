@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidatePath } from 'next/cache'
 import { cookies } from 'next/headers'
 import { verifySession, SESSION_COOKIE } from '@/lib/session'
+import { isSlugValid } from '@/lib/slugify'
 
 // Rate-limit: 60 запросов в минуту
 const rateLimitMap = new Map<string, number[]>()
@@ -38,8 +39,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Invalid body' }, { status: 400 })
   }
 
-  if (!slug || typeof slug !== 'string') {
-    return NextResponse.json({ error: 'Missing slug' }, { status: 400 })
+  if (!slug || typeof slug !== 'string' || !isSlugValid(slug)) {
+    return NextResponse.json({ error: 'Invalid slug' }, { status: 400 })
   }
 
   revalidatePath(`/${slug}`)

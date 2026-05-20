@@ -48,7 +48,8 @@ export async function signSession(
   payload: Omit<SessionPayload, 'iat'>,
 ): Promise<string> {
   const data: SessionPayload = { ...payload, iat: Date.now() }
-  const encoded = btoa(JSON.stringify(data))
+  // encodeURIComponent + unescape — безопасный btoa для Unicode (кириллица в slug)
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')
@@ -72,7 +73,7 @@ export async function verifySession(token: string): Promise<SessionPayload | nul
       encoder.encode(encoded),
     )
     if (!valid) return null
-    const json = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))
+    const json = decodeURIComponent(escape(atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))))
     const payload = JSON.parse(json) as SessionPayload
     return payload
   } catch {

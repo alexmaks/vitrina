@@ -22,7 +22,7 @@ export async function signMagicToken(
     ...payload,
     exp: Date.now() + 10 * 60 * 1000, // 10 минут
   }
-  const encoded = btoa(JSON.stringify(data))
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(data))))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '')
@@ -69,7 +69,7 @@ export async function verifyMagicToken(token: string): Promise<MagicPayload | nu
     )
     if (!valid) return null
 
-    const json = atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))
+    const json = decodeURIComponent(escape(atob(encoded.replace(/-/g, '+').replace(/_/g, '/'))))
     const payload = JSON.parse(json) as MagicPayload
     if (Date.now() > payload.exp) return null // просрочен
 
