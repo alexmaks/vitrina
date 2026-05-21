@@ -3,8 +3,10 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { signMagicToken } from '@/lib/magic-link'
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? ''
-const DOMAIN = process.env.NEXT_PUBLIC_DOMAIN
-if (!DOMAIN) throw new Error('NEXT_PUBLIC_DOMAIN is not set')
+// APP_DOMAIN — серверная переменная (без NEXT_PUBLIC_), читается в рантайме,
+// не вшивается в бандл при сборке. Добавить в Vercel env vars.
+const DOMAIN = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_DOMAIN
+if (!DOMAIN) throw new Error('APP_DOMAIN or NEXT_PUBLIC_DOMAIN is not set')
 
 async function sendMessage(chatId: number, text: string, replyMarkup?: object) {
   await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {

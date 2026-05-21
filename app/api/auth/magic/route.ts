@@ -24,7 +24,8 @@ export async function GET(request: Request) {
     slug: payload.slug,
   })
 
-  const domain = process.env.NEXT_PUBLIC_DOMAIN ?? ''
+  // APP_DOMAIN читается в рантайме (не вшивается при сборке)
+  const domain = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_DOMAIN ?? ''
   const response = NextResponse.redirect(
     new URL(redirectUrl, domain || request.url),
   )
