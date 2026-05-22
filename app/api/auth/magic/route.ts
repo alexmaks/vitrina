@@ -24,11 +24,44 @@ export async function GET(request: Request) {
     slug: payload.slug,
   })
 
-  // APP_DOMAIN читается в рантайме (не вшивается при сборке)
-  const domain = process.env.APP_DOMAIN ?? process.env.NEXT_PUBLIC_DOMAIN ?? ''
-  const response = NextResponse.redirect(
-    new URL(redirectUrl, domain || request.url),
-  )
+  // iOS WebKit (Telegram in-app browser) дропает cookie на 302-редиректах.
+  // Решение: возвращаем 200 с HTML + JS-редирект.
+  // Cookie на 200-ответе сохраняется корректно, затем JS делает переход.
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Входим...</title>
+  <style>
+    body { margin: 0; display: flex; align-items: center; justify-content: center;
+           min-height: 100svh; font-family: -apple-system, sans-serif;
+           background: #FAFAF7; color: #1A1A1A; }
+    .wrap { text-align: center; }
+    .icon { width: 56px; height: 56px; border-radius: 16px; background: #854F0B;
+            color: #fff; font-size: 24px; font-weight: 700; display: flex;
+            align-items: center; justify-content: center; margin: 0 auto 16px; }
+    p { font-size: 15px; color: #6B6B6B; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="icon">В</div>
+    <p>Входим в витрину...</p>
+  </div>
+  <script>
+    // Небольшая задержка чтобы cookie успела записаться до редиректа
+    setTimeout(function() {
+      window.location.replace(${JSON.stringify(redirectUrl)});
+    }, 200);
+  </script>
+</body>
+</html>`
+
+  const response = new NextResponse(html, {
+    status: 200,
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  })
   response.cookies.set(SESSION_COOKIE, sessionToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
