@@ -24,36 +24,49 @@ export async function GET(request: Request) {
     slug: payload.slug,
   })
 
-  // iOS WebKit (Telegram in-app browser) дропает cookie на 302-редиректах.
-  // Решение: возвращаем 200 с HTML + JS-редирект.
-  // Cookie на 200-ответе сохраняется корректно, затем JS делает переход.
+  // На iOS (Telegram WebView) auto-redirect теряет cookie.
+  // Решение: показываем страницу с кнопкой — пользователь жмёт сам.
+  // Cookie устанавливается на этой 200-странице и надёжно сохраняется.
+  // При явном тапе по ссылке браузер отправит cookie → сессия проходит.
+  const dest = encodeURIComponent(redirectUrl)
   const html = `<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Входим...</title>
+  <title>Витрина в кармане</title>
   <style>
-    body { margin: 0; display: flex; align-items: center; justify-content: center;
-           min-height: 100svh; font-family: -apple-system, sans-serif;
-           background: #FAFAF7; color: #1A1A1A; }
-    .wrap { text-align: center; }
-    .icon { width: 56px; height: 56px; border-radius: 16px; background: #854F0B;
-            color: #fff; font-size: 24px; font-weight: 700; display: flex;
-            align-items: center; justify-content: center; margin: 0 auto 16px; }
-    p { font-size: 15px; color: #6B6B6B; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { display: flex; align-items: center; justify-content: center;
+           min-height: 100svh; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+           background: #FAFAF7; padding: 24px; }
+    .card { text-align: center; width: 100%; max-width: 320px; }
+    .icon { width: 72px; height: 72px; border-radius: 20px; background: #854F0B;
+            color: #fff; font-size: 32px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 20px; }
+    h1 { font-size: 22px; font-weight: 700; color: #1A1A1A; margin-bottom: 8px; }
+    p  { font-size: 15px; color: #6B6B6B; margin-bottom: 28px; line-height: 1.5; }
+    a  { display: flex; align-items: center; justify-content: center;
+         min-height: 52px; border-radius: 16px; background: #854F0B;
+         color: #fff; font-size: 16px; font-weight: 600;
+         text-decoration: none; width: 100%; }
+    a:active { opacity: 0.8; }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="card">
     <div class="icon">В</div>
-    <p>Входим в витрину...</p>
+    <h1>Авторизация прошла</h1>
+    <p>Нажмите кнопку, чтобы войти в свою витрину</p>
+    <a href="${redirectUrl}" id="btn">Открыть витрину →</a>
   </div>
   <script>
-    // Небольшая задержка чтобы cookie успела записаться до редиректа
+    // Пробуем авто-переход через 800мс — если браузер поддерживает,
+    // пользователю не придётся нажимать кнопку вручную
     setTimeout(function() {
-      window.location.replace(${JSON.stringify(redirectUrl)});
-    }, 200);
+      try { window.location.replace(${JSON.stringify(redirectUrl)}); } catch(e) {}
+    }, 800);
   </script>
 </body>
 </html>`
