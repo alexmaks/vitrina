@@ -51,8 +51,9 @@ export async function POST(request: Request) {
   if (!telegramId || !chatId) return NextResponse.json({ ok: true })
 
   if (text.startsWith('/start')) {
-    // Upsert мастера
     const supabase = createSupabaseAdminClient()
+
+    // Upsert мастера
     const { data: merchant, error } = await supabase
       .from('merchants')
       .upsert(
@@ -72,23 +73,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    // Создаём подписанную ссылку (действует 10 минут)
-    const token = await signMagicToken({
-      merchantId: merchant.id,
-      telegramId,
-      slug: merchant.slug ?? null,
-    })
+    // Проверяем, есть ли polling-токен в команде /start <TOKEN>
+    const parts = text.trim().split(/\s+/)
+    const loginToken = parts[1] ?? null
 
-    const isNew = !merchant.slug || !merchant.is_published
-    const magicUrl = `${DOMAIN}/api/auth/magic?token=${token}`
+    if (loginToken) {
+      // Новый flow: браузер ждёт — проставляем merchant_id в login_tokens
+      const { error: updErr } = await supabase
+        .from('login_tokens')
+        .update({ merchant_id: merchant.id })
+        .eq('token', loginToken)
+        .gt('expires_at', new Date().toISOString())
 
-    const welcomeText = isNew
-      ? `Привет, ${firstName}! 👋\n\nНажмите кнопку ниже, чтобы создать свою витрину.`
-      : `С возвращением, ${firstName}! 👋\n\nНажмите кнопку, чтобы войти в витрину.`
+      if (updErr) {
+        await sendMessage(chatId, '⚠️ Ссылка устарела. Попробуйте войти заново.')
+        return NextResponse.json({ ok: true })
+      }
 
-    await sendMessage(chatId, welcomeText, {
-      inline_keyboard: [[{ text: '🚀 Войти в витрину', url: magicUrl }]],
-    })
+      const isNew = !merchant.slug || !merchant.is_published
+      const confirmText = isNew
+        ? `Привет, ${firstName}! 👋\n\nАвторизация подтверждена. Вернитесь в браузер — страница откроется автоматически.`
+        : `С возвращением, ${firstName}! 👋\n\nАвторизация подтверждена. Вернитесь в браузер — страница откроется автоматически.`
+
+      await sendMessage(chatId, confirmText)
+    } else {
+      // Старый flow (magic-link): пользователь открыл бота напрямую
+      const token = await signMagicToken({
+        merchantId: merchant.id,
+        telegramId,
+        slug: merchant.slug ?? null,
+      })
+
+      const isNew = !merchant.slug || !merchant.is_published
+      const magicUrl = `${DOMAIN}/api/auth/magic?token=${token}`
+
+      const welcomeText = isNew
+        ? `Привет, ${firstName}! 👋\n\nНажмите кнопку ниже, чтобы создать свою витрину.`
+        : `С возвращением, ${firstName}! 👋\n\nНажмите кнопку, чтобы войти в витрину.`
+
+      await sendMessage(chatId, welcomeText, {
+        inline_keyboard: [[{ text: '🚀 Войти в витрину', url: magicUrl }]],
+      })
+    }
   }
 
   return NextResponse.json({ ok: true })
