@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import { getMerchantBySlug, getAllPublishedSlugs } from '@/lib/merchants-db'
 import StorefrontHeader from '@/components/StorefrontHeader'
 import SaleBanner from '@/components/SaleBanner'
-import ProductGrid from '@/components/ProductGrid'
+import ProductGallery from '@/components/ProductGallery'
 import ContactButton from '@/components/ContactButton'
 
 interface PageProps {
@@ -67,7 +67,11 @@ export default async function StorefrontPage({ params }: PageProps) {
       <StorefrontHeader merchant={merchant} />
       {merchant.sale?.isActive && <SaleBanner sale={merchant.sale} />}
       <div className="flex-1">
-        <ProductGrid products={merchant.products} />
+        <ProductGallery
+          products={merchant.products}
+          telegram={merchant.telegram}
+          merchantName={merchant.name}
+        />
       </div>
       <ContactButton
         telegram={merchant.telegram}
