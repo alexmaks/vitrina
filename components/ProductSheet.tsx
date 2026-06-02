@@ -22,7 +22,11 @@ function getTouchDistance(t: React.TouchList) {
 }
 
 export default function ProductSheet({ product, telegram, onClose }: Props) {
+  const images = product.images.length > 0 ? product.images : (product.image ? [product.image] : [])
+  const hasMany = images.length > 1
+
   const [visible, setVisible] = useState(false)
+  const [photoIndex, setPhotoIndex] = useState(0)
 
   // drag-to-dismiss
   const [sheetY, setSheetY] = useState(0)
@@ -39,7 +43,7 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
   const touchStartY = useRef(0)
   const lastTap = useRef(0)
 
-  // slide-in
+  // slide-in animation
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true))
     return () => cancelAnimationFrame(id)
@@ -50,6 +54,11 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
   }, [])
+
+  // reset zoom when photo changes
+  useEffect(() => {
+    setScale(1); setPanX(0); setPanY(0)
+  }, [photoIndex])
 
   const close = useCallback(() => {
     setVisible(false)
@@ -84,7 +93,7 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
     }
   }
 
-  // ── image: pinch zoom + double-tap ────────────────────────────────────────
+  // ── image: pinch zoom + swipe photos + double-tap ─────────────────────────
 
   function onImageTouchStart(e: React.TouchEvent) {
     if (e.touches.length === 2) {
@@ -116,13 +125,25 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
       setScale(next)
       if (next <= 1) { setPanX(0); setPanY(0) }
     } else if (scale > 1) {
-      // pan when zoomed
       const dx = e.touches[0].clientX - touchStartX.current
       const dy = e.touches[0].clientY - touchStartY.current
       touchStartX.current = e.touches[0].clientX
       touchStartY.current = e.touches[0].clientY
       setPanX((p) => p + dx / scale)
       setPanY((p) => p + dy / scale)
+    }
+  }
+
+  function onImageTouchEnd(e: React.TouchEvent) {
+    if (scale > 1 || !hasMany) return
+
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+
+    // Горизонтальный свайп → смена фото
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      if (dx < 0 && photoIndex < images.length - 1) setPhotoIndex((i) => i + 1)
+      if (dx > 0 && photoIndex > 0) setPhotoIndex((i) => i - 1)
     }
   }
 
@@ -134,6 +155,8 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
   const tgAvail = `https://t.me/${telegram}?text=${encodeURIComponent(
     `Когда появится в наличии «${product.name}»?`
   )}`
+
+  const currentImage = images[photoIndex]
 
   // ── render ────────────────────────────────────────────────────────────────
 
@@ -169,17 +192,19 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
           <div className="h-1 w-10 rounded-full bg-[#E0E0D8]" />
         </div>
 
-        {/* image with zoom */}
+        {/* image */}
         <div
           className="relative aspect-square w-full select-none overflow-hidden bg-[#F5F5F0]"
           style={{ touchAction: scale > 1 ? 'none' : 'pan-y' }}
           onTouchStart={onImageTouchStart}
           onTouchMove={onImageTouchMove}
+          onTouchEnd={onImageTouchEnd}
         >
-          {product.image ? (
+          {currentImage ? (
             <Image
-              src={product.image}
-              alt={product.name}
+              key={currentImage}
+              src={currentImage}
+              alt={`${product.name} — фото ${photoIndex + 1}`}
               fill
               sizes="100vw"
               className="object-cover"
@@ -211,19 +236,66 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
             </div>
           )}
 
-          {/* zoom hint — shown briefly then fades */}
-          {scale === 1 && (
+          {/* Desktop arrows (только когда несколько фото) */}
+          {hasMany && photoIndex > 0 && (
+            <button
+              onClick={() => setPhotoIndex((i) => i - 1)}
+              className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-black/30 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/50 md:flex"
+              aria-label="Предыдущее фото"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+              </svg>
+            </button>
+          )}
+          {hasMany && photoIndex < images.length - 1 && (
+            <button
+              onClick={() => setPhotoIndex((i) => i + 1)}
+              className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-black/30 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/50 md:flex"
+              aria-label="Следующее фото"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+              </svg>
+            </button>
+          )}
+
+          {/* Zoom hint */}
+          {scale === 1 && !hasMany && currentImage && (
             <span className="pointer-events-none absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/30 px-3 py-1 text-xs text-white/80 backdrop-blur-sm">
               Двойной тап — увеличить
             </span>
           )}
         </div>
 
+        {/* Dots — только если несколько фото */}
+        {hasMany && (
+          <div className="flex justify-center gap-1.5 py-2.5">
+            {images.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setPhotoIndex(i)}
+                aria-label={`Фото ${i + 1}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === photoIndex ? 'w-4 bg-[#854F0B]' : 'w-1.5 bg-[#D0CFC8]'
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
         {/* scrollable content */}
         <div className="overflow-y-auto px-4 pb-8 pt-3" style={{ maxHeight: '45svh' }}>
-          <h2 className="mb-1 text-[18px] font-bold leading-snug text-[#1A1A1A]">
-            {product.name}
-          </h2>
+          <div className="mb-1 flex items-start justify-between gap-3">
+            <h2 className="text-[18px] font-bold leading-snug text-[#1A1A1A]">
+              {product.name}
+            </h2>
+            {hasMany && (
+              <span className="mt-0.5 shrink-0 text-xs text-[#9A9A9A]">
+                {photoIndex + 1} / {images.length}
+              </span>
+            )}
+          </div>
 
           <div className="mb-3 flex items-baseline gap-2">
             {product.isAvailable && product.discountedPrice !== undefined ? (

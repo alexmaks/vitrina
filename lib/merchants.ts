@@ -52,6 +52,7 @@ function parseMerchant(filePath: string): Merchant {
       name: p.name,
       price: p.price,
       image: p.image,
+      images: [p.image].filter(Boolean),
       discountPercent,
       discountedPrice,
       isAvailable: true,

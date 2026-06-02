@@ -22,7 +22,9 @@ async function createProduct(formData: FormData) {
   const discountRaw = formData.get('discountPercent') as string
   const discountPercent = discountRaw ? parseInt(discountRaw, 10) : null
   const isAvailable = formData.get('isAvailable') === 'true'
-  const imageUrl = (formData.get('imageUrl') as string) || null
+  const imageUrlsRaw = (formData.get('imageUrls') as string) || '[]'
+  const imageUrls: string[] = JSON.parse(imageUrlsRaw)
+  const imageUrl = imageUrls[0] ?? null
 
   await supabase.from('products').insert({
     merchant_id: session.merchantId,
@@ -32,6 +34,7 @@ async function createProduct(formData: FormData) {
     discount_percent: discountPercent,
     is_available: isAvailable,
     image_url: imageUrl,
+    image_urls: imageUrls,
     sort_order: 0,
   } as Record<string, unknown>)
 

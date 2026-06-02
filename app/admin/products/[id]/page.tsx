@@ -27,7 +27,9 @@ async function updateProduct(formData: FormData) {
   const discountRaw = formData.get('discountPercent') as string
   const discountPercent = discountRaw ? parseInt(discountRaw, 10) : null
   const isAvailable = formData.get('isAvailable') === 'true'
-  const imageUrl = (formData.get('imageUrl') as string) || null
+  const imageUrlsRaw = (formData.get('imageUrls') as string) || '[]'
+  const imageUrls: string[] = JSON.parse(imageUrlsRaw)
+  const imageUrl = imageUrls[0] ?? null
 
   await supabase
     .from('products')
@@ -38,6 +40,7 @@ async function updateProduct(formData: FormData) {
       discount_percent: discountPercent,
       is_available: isAvailable,
       image_url: imageUrl,
+      image_urls: imageUrls,
     } as Record<string, unknown>)
     .eq('id', productId)
     .eq('merchant_id', session.merchantId)
@@ -59,10 +62,10 @@ async function deleteProduct(productId: string, merchantSlug: string | null) {
 
   const supabase = createSupabaseAdminClient()
 
-  // Получаем image_url для удаления из Storage
+  // Получаем все фото для удаления из Storage
   const { data: product } = await supabase
     .from('products')
-    .select('image_url')
+    .select('image_url, image_urls')
     .eq('id', productId)
     .eq('merchant_id', session.merchantId)
     .single()
@@ -73,10 +76,15 @@ async function deleteProduct(productId: string, merchantSlug: string | null) {
     .eq('id', productId)
     .eq('merchant_id', session.merchantId)
 
-  // Удаляем файл из Storage если есть
-  if (product?.image_url) {
+  // Удаляем все файлы из Storage
+  const allUrls: string[] = [
+    ...(product?.image_urls ?? []),
+    ...(product?.image_url ? [product.image_url] : []),
+  ]
+  const uniqueUrls = [...new Set(allUrls)]
+  for (const imgUrl of uniqueUrls) {
     try {
-      const url = new URL(product.image_url)
+      const url = new URL(imgUrl)
       const pathParts = url.pathname.split('/object/public/products/')
       if (pathParts[1]) {
         await supabase.storage.from('products').remove([pathParts[1]])
@@ -137,7 +145,9 @@ export default async function EditProductPage({ params }: PageProps) {
           description: product.description ?? '',
           discountPercent: product.discount_percent ?? '',
           isAvailable: product.is_available,
-          imageUrl: product.image_url ?? '',
+          imageUrls: product.image_urls?.length
+            ? product.image_urls
+            : (product.image_url ? [product.image_url] : []),
         }}
         action={updateProduct}
         deleteAction={deleteAction}
