@@ -9,7 +9,6 @@ import ProductSheet from './ProductSheet'
 type Props = {
   products: Product[]
   telegram: Merchant['telegram']
-  merchantName: Merchant['name']
 }
 
 function ProductCard({
@@ -83,7 +82,7 @@ function ProductCard({
   )
 }
 
-export default function ProductGallery({ products, telegram, merchantName }: Props) {
+export default function ProductGallery({ products, telegram }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 
   return (
@@ -106,10 +105,8 @@ export default function ProductGallery({ products, telegram, merchantName }: Pro
 
       {selectedIndex !== null && (
         <ProductSheet
-          products={products}
-          initialIndex={selectedIndex}
+          product={products[selectedIndex]}
           telegram={telegram}
-          merchantName={merchantName}
           onClose={() => setSelectedIndex(null)}
         />
       )}

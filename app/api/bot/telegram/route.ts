@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
-import { signMagicToken } from '@/lib/magic-link'
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN ?? ''
 // APP_DOMAIN — серверная переменная (без NEXT_PUBLIC_), читается в рантайме,
@@ -97,23 +96,12 @@ export async function POST(request: Request) {
 
       await sendMessage(chatId, confirmText)
     } else {
-      // Старый flow (magic-link): пользователь открыл бота напрямую
-      const token = await signMagicToken({
-        merchantId: merchant.id,
-        telegramId,
-        slug: merchant.slug ?? null,
-      })
-
-      const isNew = !merchant.slug || !merchant.is_published
-      const magicUrl = `${DOMAIN}/api/auth/magic?token=${token}`
-
-      const welcomeText = isNew
-        ? `Привет, ${firstName}! 👋\n\nНажмите кнопку ниже, чтобы создать свою витрину.`
-        : `С возвращением, ${firstName}! 👋\n\nНажмите кнопку, чтобы войти в витрину.`
-
-      await sendMessage(chatId, welcomeText, {
-        inline_keyboard: [[{ text: '🚀 Войти в витрину', url: magicUrl }]],
-      })
+      // Пользователь открыл бота напрямую (без токена из браузера).
+      // Не отправляем кнопку — она открывается в браузере Telegram,
+      // откуда нельзя сохранить PWA. Просто объясняем где войти.
+      const loginUrl = `${DOMAIN}/login`
+      const welcomeText = `Привет, ${firstName}! 👋\n\nЧтобы войти, откройте страницу входа в браузере (Safari или Chrome):\n\n${loginUrl}\n\nТам нажмите «Войти через Telegram» — страница сама откроется в нужном месте.`
+      await sendMessage(chatId, welcomeText)
     }
   }
 

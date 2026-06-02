@@ -70,7 +70,6 @@ export default async function StorefrontPage({ params }: PageProps) {
         <ProductGallery
           products={merchant.products}
           telegram={merchant.telegram}
-          merchantName={merchant.name}
         />
       </div>
       <ContactButton
