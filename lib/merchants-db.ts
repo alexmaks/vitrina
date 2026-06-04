@@ -60,7 +60,12 @@ function mapRow(row: MerchantRow): Merchant {
       : undefined
 
   const products: Product[] = (row.products ?? [])
-    .sort((a, b) => a.sort_order - b.sort_order)
+    // Баг 4: на публичной витрине — сначала товары в наличии, потом нет.
+    // Внутри каждой группы — по sort_order.
+    .sort((a, b) => {
+      if (a.is_available !== b.is_available) return a.is_available ? -1 : 1
+      return a.sort_order - b.sort_order
+    })
     .map((p) => {
       const discountPercent =
         p.discount_percent ?? (saleActive && row.sale_percent ? row.sale_percent : undefined)

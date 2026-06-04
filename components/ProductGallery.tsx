@@ -61,22 +61,27 @@ function ProductCard({
 
       <div className="px-2.5 py-2">
         <p className="truncate text-sm leading-snug text-[#1A1A1A]">{product.name}</p>
-        <div className="mt-1 flex items-baseline gap-1.5">
-          {!unavailable && product.discountedPrice !== undefined ? (
-            <>
-              <span className="text-sm font-bold text-[#C8332E]">
-                {product.discountedPrice.toLocaleString('ru-RU')} {STRINGS.currency}
-              </span>
-              <span className="text-xs text-[#9A9A9A] line-through">
+        {/* Доп: цена скрыта для товаров «нет в наличии» — не создаёт иллюзию покупки */}
+        {unavailable ? (
+          <p className="mt-1 text-xs text-[#9A9A9A]">Спросить когда будет →</p>
+        ) : (
+          <div className="mt-1 flex items-baseline gap-1.5">
+            {product.discountedPrice !== undefined ? (
+              <>
+                <span className="text-sm font-bold text-[#C8332E]">
+                  {product.discountedPrice.toLocaleString('ru-RU')} {STRINGS.currency}
+                </span>
+                <span className="text-xs text-[#9A9A9A] line-through">
+                  {product.price.toLocaleString('ru-RU')} {STRINGS.currency}
+                </span>
+              </>
+            ) : (
+              <span className="text-sm font-semibold text-[#1A1A1A]">
                 {product.price.toLocaleString('ru-RU')} {STRINGS.currency}
               </span>
-            </>
-          ) : (
-            <span className={`text-sm font-semibold ${unavailable ? 'text-[#9A9A9A]' : 'text-[#1A1A1A]'}`}>
-              {product.price.toLocaleString('ru-RU')} {STRINGS.currency}
-            </span>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </article>
   )

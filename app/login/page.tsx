@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 const BOT_USERNAME =
@@ -8,8 +7,20 @@ const BOT_USERNAME =
 
 type Step = 'idle' | 'waiting' | 'done'
 
+// Баг 1: tg:// deep link открывает Telegram-приложение без новой вкладки Safari.
+// После нажатия Start в Telegram пользователь возвращается на ТУ ЖЕ вкладку.
+function openTelegram(token: string, webFallbackUrl: string) {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+  if (isMobile) {
+    // Deep link — открывает Telegram-приложение, Safari остаётся на месте
+    window.location.href = `tg://resolve?domain=${BOT_USERNAME}&start=${token}`
+  } else {
+    // Десктоп: новая вкладка приемлема, Telegram web или приложение
+    window.open(webFallbackUrl, '_blank')
+  }
+}
+
 export default function LoginPage() {
-  useRouter() // kept for potential future use
   const [step, setStep] = useState<Step>('idle')
   const [error, setError] = useState<string | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -17,12 +28,9 @@ export default function LoginPage() {
   const botUrlRef = useRef<string | null>(null)
 
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current)
-    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
   }, [])
 
-  // Опрос сервера каждые 2 сек
   function startPolling(token: string) {
     if (pollRef.current) clearInterval(pollRef.current)
     pollRef.current = setInterval(async () => {
@@ -46,7 +54,6 @@ export default function LoginPage() {
     }, 2000)
   }
 
-  // Когда пользователь возвращается из Telegram — мгновенная проверка
   useEffect(() => {
     const onVisible = () => {
       if (step === 'waiting' && tokenRef.current) {
@@ -77,7 +84,7 @@ export default function LoginPage() {
       botUrlRef.current = botUrl
       setStep('waiting')
 
-      window.open(botUrl, '_blank')
+      openTelegram(token, botUrl)
       startPolling(token)
     } catch {
       setError('Не удалось соединиться с сервером. Попробуйте снова.')
@@ -96,7 +103,6 @@ export default function LoginPage() {
     <div className="flex min-h-svh flex-col items-center justify-center bg-[#FAFAF7] px-5">
       <div className="w-full max-w-sm text-center">
 
-        {/* Логотип */}
         <div className="mb-6 flex justify-center">
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#854F0B] text-3xl text-white shadow-lg">
             В
@@ -110,7 +116,6 @@ export default function LoginPage() {
           Войдите через Telegram, чтобы управлять своей витриной
         </p>
 
-        {/* ── Экран: ожидание ── */}
         {step === 'waiting' && (
           <div className="rounded-2xl border border-[#E5E5E0] bg-white p-6">
             <div className="mb-4 flex justify-center gap-1.5">
@@ -128,15 +133,13 @@ export default function LoginPage() {
             <p className="mb-4 text-sm text-[#6B6B6B]">
               В Telegram нажмите <b>Start</b> — страница обновится автоматически
             </p>
-            {botUrlRef.current && (
-              <a
-                href={botUrlRef.current}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mb-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#2AABEE] text-sm font-semibold text-white"
+            {tokenRef.current && botUrlRef.current && (
+              <button
+                onClick={() => openTelegram(tokenRef.current!, botUrlRef.current!)}
+                className="mb-3 flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-[#2AABEE] text-sm font-semibold text-white active:opacity-80"
               >
                 Открыть Telegram снова
-              </a>
+              </button>
             )}
             <button
               onClick={handleRetry}
@@ -147,7 +150,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* ── Экран: успех ── */}
         {step === 'done' && (
           <div className="rounded-2xl border border-[#E5E5E0] bg-white p-6">
             <p className="mb-2 text-4xl">✅</p>
@@ -156,12 +158,13 @@ export default function LoginPage() {
           </div>
         )}
 
-        {/* ── Экран: начальный ── */}
         {step === 'idle' && (
           <>
+            {/* Баг 2: убрал hover:opacity-90 — на iOS первый тап давал hover,
+                второй — click. Оставил только active: для тактильного отклика. */}
             <button
               onClick={handleLogin}
-              className="flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#2AABEE] font-semibold text-white transition-opacity hover:opacity-90 active:opacity-75"
+              className="flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#2AABEE] font-semibold text-white transition-opacity active:opacity-75"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
