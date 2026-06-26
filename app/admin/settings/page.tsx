@@ -31,6 +31,7 @@ export default function SettingsPage() {
   const router = useRouter()
   const [avatar, setAvatar] = useState(merchant.avatar ?? '')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
+  const [avatarError, setAvatarError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
@@ -51,7 +52,9 @@ export default function SettingsPage() {
   async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    e.target.value = '' // позволяем выбрать тот же файл повторно
     setUploadingAvatar(true)
+    setAvatarError('')
     const fd = new FormData()
     fd.append('file', file)
     fd.append('type', 'avatar')
@@ -60,7 +63,12 @@ export default function SettingsPage() {
       if (res.ok) {
         const { url } = await res.json()
         setAvatar(url)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setAvatarError(err.error ?? 'Не удалось загрузить фото')
       }
+    } catch {
+      setAvatarError('Не удалось загрузить фото')
     } finally {
       setUploadingAvatar(false)
     }
@@ -126,11 +134,14 @@ export default function SettingsPage() {
             <input
               ref={fileRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic"
+              accept="image/jpeg,image/png,image/webp"
               className="hidden"
               onChange={handleAvatarChange}
             />
           </div>
+          {avatarError && (
+            <p className="mt-2 text-sm text-red-500">{avatarError}</p>
+          )}
         </div>
 
         {/* Название */}

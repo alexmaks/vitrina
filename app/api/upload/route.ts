@@ -45,11 +45,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
   }
 
-  // Ограничение размера
-  const maxSize = type === 'avatar' ? 2 * 1024 * 1024 : 5 * 1024 * 1024
+  // Ограничение размера. Вход всё равно пережимается Sharp в WebP ≤1080²,
+  // поэтому лимит щедрый — фото с iPhone (HEIC/JPEG) легко весит 3–5 МБ,
+  // а старый лимит аватара в 2 МБ молча их отбраковывал.
+  const maxSize = 8 * 1024 * 1024
   if (file.size > maxSize) {
     return NextResponse.json(
-      { error: `File too large (max ${type === 'avatar' ? '2MB' : '5MB'})` },
+      { error: 'Файл слишком большой (макс. 8 МБ)' },
       { status: 413 },
     )
   }
@@ -67,6 +69,7 @@ export async function POST(request: Request) {
   let processed: Buffer
   try {
     processed = await sharp(buffer)
+      .rotate() // авто-поворот по EXIF — иначе фото с iPhone уезжают набок
       .resize(1080, 1080, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer()
