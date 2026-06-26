@@ -57,6 +57,18 @@ function ProductCard({
             {STRINGS.discount(product.discountPercent)}
           </span>
         )}
+
+        {/* Значок «есть видео» — само видео откроется внутри карточки товара */}
+        {product.video && (
+          <span
+            className="absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm"
+            aria-label="Есть видео"
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          </span>
+        )}
       </div>
 
       <div className="px-2.5 py-2">

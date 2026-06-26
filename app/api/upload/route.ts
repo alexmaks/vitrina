@@ -21,6 +21,19 @@ function detectMimeType(buffer: Buffer): string | null {
   return null
 }
 
+// Видео: MP4/MOV (бокс ftyp) и WebM (EBML). MOV пишут айфоны.
+function detectVideo(buffer: Buffer): { contentType: string; ext: string } | null {
+  if (buffer[0] === 0x1a && buffer[1] === 0x45 && buffer[2] === 0xdf && buffer[3] === 0xa3) {
+    return { contentType: 'video/webm', ext: 'webm' }
+  }
+  if (buffer[4] === 0x66 && buffer[5] === 0x74 && buffer[6] === 0x79 && buffer[7] === 0x70) {
+    const brand = buffer.toString('ascii', 8, 12)
+    if (brand.startsWith('qt')) return { contentType: 'video/quicktime', ext: 'mov' }
+    return { contentType: 'video/mp4', ext: 'mp4' }
+  }
+  return null
+}
+
 export async function POST(request: Request) {
   // Авторизация
   const cookieStore = await cookies()
@@ -43,6 +56,36 @@ export async function POST(request: Request) {
 
   if (!file) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
+  }
+
+  // ── Видео: грузим как есть, без обработки Sharp ─────────────────────
+  if (type === 'video') {
+    const MAX_VIDEO = 15 * 1024 * 1024
+    if (file.size > MAX_VIDEO) {
+      return NextResponse.json(
+        { error: 'Видео слишком большое (макс. 15 МБ, ~15 секунд)' },
+        { status: 413 },
+      )
+    }
+    const vbuf = Buffer.from(await file.arrayBuffer())
+    const video = detectVideo(vbuf)
+    if (!video) {
+      return NextResponse.json(
+        { error: 'Поддерживаются видео MP4, MOV или WebM' },
+        { status: 415 },
+      )
+    }
+    const supabase = createSupabaseAdminClient()
+    const storagePath = `${session.merchantId}/${productId}.${video.ext}`
+    const { error: uploadError } = await supabase.storage
+      .from('videos')
+      .upload(storagePath, vbuf, { contentType: video.contentType, upsert: true })
+    if (uploadError) {
+      console.error('Video upload error:', uploadError)
+      return NextResponse.json({ error: 'Не удалось загрузить видео' }, { status: 500 })
+    }
+    const { data: urlData } = supabase.storage.from('videos').getPublicUrl(storagePath)
+    return NextResponse.json({ url: urlData.publicUrl })
   }
 
   // Ограничение размера. Вход всё равно пережимается Sharp в WebP ≤1080²,

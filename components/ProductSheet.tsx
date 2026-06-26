@@ -254,6 +254,19 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
               </div>
             )}
 
+            {/* Короткое видео товара */}
+            {product.video && (
+              <div className="mb-4 overflow-hidden rounded-2xl bg-black">
+                <video
+                  src={product.video}
+                  className="max-h-[70svh] w-full"
+                  controls
+                  playsInline
+                  preload="metadata"
+                />
+              </div>
+            )}
+
             {product.description && (
               <p className="mb-5 text-[15px] leading-relaxed text-[#4A4A4A]">
                 {product.description}

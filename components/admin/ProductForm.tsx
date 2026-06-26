@@ -31,6 +31,7 @@ interface ProductFormProps {
     isAvailable?: boolean
     imageUrls?: string[]
     imageUrl?: string  // legacy single-photo fallback
+    videoUrl?: string  // короткое видео (опционально)
   }
   action: (formData: FormData) => Promise<void>
   deleteAction?: () => Promise<void>
@@ -55,9 +56,13 @@ export default function ProductForm({
   const [images, setImages] = useState<string[]>(initialImages)
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null)
   const [uploadError, setUploadError] = useState('')
+  const [video, setVideo] = useState<string>(defaultValues?.videoUrl ?? '')
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [videoError, setVideoError] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const videoInputRef = useRef<HTMLInputElement>(null)
   // Стабильный base ID для загрузок нового товара
   const baseId = useRef<string>(productId ?? crypto.randomUUID())
 
@@ -144,6 +149,37 @@ export default function ProductForm({
     setImages((prev) => prev.filter((_, i) => i !== index))
   }
 
+  async function handleVideoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setUploadingVideo(true)
+    setVideoError('')
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('type', 'video')
+    fd.append('productId', `${baseId.current}_video`)
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setVideoError(err.error ?? 'Не удалось загрузить видео')
+      } else {
+        const { url } = await res.json()
+        setVideo(url)
+      }
+    } catch {
+      setVideoError('Не удалось загрузить видео')
+    } finally {
+      setUploadingVideo(false)
+    }
+  }
+
+  function removeVideo() {
+    setVideo('')
+    setVideoError('')
+  }
+
   async function onSubmit(values: FormValues) {
     setSaving(true)
     const fd = new FormData()
@@ -153,6 +189,7 @@ export default function ProductForm({
     fd.append('discountPercent', values.discountPercent ? String(values.discountPercent) : '')
     fd.append('isAvailable', values.isAvailable ? 'true' : 'false')
     fd.append('imageUrls', JSON.stringify(images.filter(Boolean)))
+    fd.append('videoUrl', video)
     fd.append('merchantId', merchantId)
     if (productId) fd.append('productId', productId)
 
@@ -264,6 +301,68 @@ export default function ProductForm({
         )}
       </div>
 
+      {/* ── Видео (необязательно) ────────────────────── */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-[#1A1A1A]">
+          Видео <span className="font-normal text-[#9A9A9A]">— необязательно</span>
+        </label>
+
+        {video ? (
+          <div className="relative h-[160px] w-[120px] overflow-hidden rounded-xl border border-[#E5E5E0] bg-black">
+            <video
+              src={video}
+              className="h-full w-full object-cover"
+              controls
+              muted
+              playsInline
+              preload="metadata"
+            />
+            <button
+              type="button"
+              onClick={removeVideo}
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white"
+              aria-label="Удалить видео"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => videoInputRef.current?.click()}
+            disabled={uploadingVideo}
+            className="flex h-[160px] w-[120px] flex-col items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-[#D0CFC8] bg-[#F5F5F0] text-[#9A9A9A] transition-colors hover:border-[#854F0B] hover:text-[#854F0B] disabled:opacity-60"
+            aria-label="Добавить видео"
+          >
+            {uploadingVideo ? (
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#854F0B] border-t-transparent" />
+            ) : (
+              <>
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 6h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2z" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-[11px] font-medium">Добавить видео</span>
+              </>
+            )}
+          </button>
+        )}
+
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept="video/mp4,video/quicktime,video/webm"
+          className="hidden"
+          onChange={handleVideoChange}
+        />
+
+        {videoError && <p className="mt-1 text-sm text-red-500">{videoError}</p>}
+        <p className="mt-1 text-xs text-[#9A9A9A]">
+          Короткое видео до 15 сек (макс. 15 МБ). Лучше формат MP4.
+        </p>
+      </div>
+
       {/* ── Название ─────────────────────────────────── */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-[#1A1A1A]">
@@ -338,7 +437,7 @@ export default function ProductForm({
       {/* ── Кнопки ───────────────────────────────────── */}
       <button
         type="submit"
-        disabled={saving || isUploading}
+        disabled={saving || isUploading || uploadingVideo}
         className="flex min-h-[52px] items-center justify-center rounded-2xl bg-[#854F0B] font-semibold text-white transition-opacity disabled:opacity-60"
       >
         {saving ? 'Сохраняю...' : 'Сохранить'}

@@ -25,6 +25,7 @@ async function createProduct(formData: FormData) {
   const imageUrlsRaw = (formData.get('imageUrls') as string) || '[]'
   const imageUrls: string[] = JSON.parse(imageUrlsRaw)
   const imageUrl = imageUrls[0] ?? null
+  const videoUrl = (formData.get('videoUrl') as string) || null
 
   await supabase.from('products').insert({
     merchant_id: session.merchantId,
@@ -35,6 +36,7 @@ async function createProduct(formData: FormData) {
     is_available: isAvailable,
     image_url: imageUrl,
     image_urls: imageUrls,
+    video_url: videoUrl,
     sort_order: 0,
   } as Record<string, unknown>)
 

@@ -32,6 +32,7 @@ export interface Product {
   price: number
   image: string                // первое фото (обложка) — для обратной совместимости
   images: string[]             // все фото в порядке (до 10)
+  video?: string               // короткое видео товара (опционально)
   description?: string         // описание (опционально)
   discountPercent?: number     // итоговый процент скидки (свой или из sale)
   discountedPrice?: number     // цена со скидкой

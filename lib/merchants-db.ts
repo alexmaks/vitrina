@@ -12,6 +12,7 @@ interface ProductRow {
   price: number
   image_url: string | null
   image_urls: string[] | null
+  video_url: string | null
   description: string | null
   discount_percent: number | null
   is_available: boolean
@@ -86,6 +87,7 @@ function mapRow(row: MerchantRow): Merchant {
         price: p.price,
         image: images[0] ?? '',
         images,
+        video: p.video_url ?? undefined,
         description: p.description ?? undefined,
         discountPercent,
         discountedPrice,
@@ -120,7 +122,7 @@ export async function getMerchantBySlug(slug: string): Promise<Merchant | null> 
       id, slug, name, tagline, avatar_url, contact_telegram,
       accent_color, sale_percent, sale_until, sale_text, is_published,
       products (
-        id, name, price, image_url, image_urls, description,
+        id, name, price, image_url, image_urls, video_url, description,
         discount_percent, is_available, sort_order
       )
     `)
@@ -156,7 +158,7 @@ export async function getMerchantForAdmin(merchantId: string): Promise<Merchant 
       id, slug, name, tagline, avatar_url, contact_telegram,
       accent_color, sale_percent, sale_until, sale_text, is_published,
       products (
-        id, name, price, image_url, image_urls, description,
+        id, name, price, image_url, image_urls, video_url, description,
         discount_percent, is_available, sort_order
       )
     `)
@@ -182,7 +184,7 @@ export async function getMerchantAdminData(merchantId: string): Promise<Merchant
       id, slug, name, tagline, avatar_url, contact_telegram,
       accent_color, sale_percent, sale_until, sale_text, is_published,
       products (
-        id, name, price, image_url, image_urls, description,
+        id, name, price, image_url, image_urls, video_url, description,
         discount_percent, is_available, sort_order
       )
     `)

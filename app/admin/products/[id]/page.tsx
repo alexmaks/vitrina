@@ -30,6 +30,7 @@ async function updateProduct(formData: FormData) {
   const imageUrlsRaw = (formData.get('imageUrls') as string) || '[]'
   const imageUrls: string[] = JSON.parse(imageUrlsRaw)
   const imageUrl = imageUrls[0] ?? null
+  const videoUrl = (formData.get('videoUrl') as string) || null
 
   await supabase
     .from('products')
@@ -41,6 +42,7 @@ async function updateProduct(formData: FormData) {
       is_available: isAvailable,
       image_url: imageUrl,
       image_urls: imageUrls,
+      video_url: videoUrl,
     } as Record<string, unknown>)
     .eq('id', productId)
     .eq('merchant_id', session.merchantId)
@@ -62,10 +64,10 @@ async function deleteProduct(productId: string, merchantSlug: string | null) {
 
   const supabase = createSupabaseAdminClient()
 
-  // Получаем все фото для удаления из Storage
+  // Получаем все фото и видео для удаления из Storage
   const { data: product } = await supabase
     .from('products')
-    .select('image_url, image_urls')
+    .select('image_url, image_urls, video_url')
     .eq('id', productId)
     .eq('merchant_id', session.merchantId)
     .single()
@@ -88,6 +90,19 @@ async function deleteProduct(productId: string, merchantSlug: string | null) {
       const pathParts = url.pathname.split('/object/public/products/')
       if (pathParts[1]) {
         await supabase.storage.from('products').remove([pathParts[1]])
+      }
+    } catch {
+      // Игнорируем ошибки удаления файла
+    }
+  }
+
+  // Удаляем видео из бакета videos
+  if (product?.video_url) {
+    try {
+      const vurl = new URL(product.video_url)
+      const vparts = vurl.pathname.split('/object/public/videos/')
+      if (vparts[1]) {
+        await supabase.storage.from('videos').remove([vparts[1]])
       }
     } catch {
       // Игнорируем ошибки удаления файла
@@ -148,6 +163,7 @@ export default async function EditProductPage({ params }: PageProps) {
           imageUrls: product.image_urls?.length
             ? product.image_urls
             : (product.image_url ? [product.image_url] : []),
+          videoUrl: product.video_url ?? '',
         }}
         action={updateProduct}
         deleteAction={deleteAction}
