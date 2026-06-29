@@ -129,28 +129,31 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
         <Drawer.Content
           className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl outline-none"
         >
-          {/* Ручка + кнопка закрытия — drag-зона для vaul */}
-          <div className="relative flex items-center justify-center pb-1 pt-3 shrink-0">
+          {/* Ручка — drag-зона для vaul */}
+          <div className="flex items-center justify-center pb-1.5 pt-3 shrink-0">
             <Drawer.Handle className="h-1 w-10 rounded-full bg-[#E0E0D8]" />
-            <button
-              onClick={onClose}
-              className="absolute right-4 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#F0EFE9] text-[#6B6B6B]"
-              aria-label="Закрыть"
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-              </svg>
-            </button>
           </div>
 
-          {/* Медиа — вертикальный формат 4:5, фото + видео в одной карусели */}
+          {/* Медиа — вертикальный формат, фото + видео в одной карусели.
+              Высота ограничена, чтобы описанию и кнопке оставалось место. */}
           <div
-            className="relative aspect-[4/5] w-full shrink-0 select-none overflow-hidden bg-[#F5F5F0]"
+            className="relative h-[48svh] w-full shrink-0 select-none overflow-hidden bg-[#F5F5F0]"
             style={{ touchAction: scale > 1 ? 'none' : 'pan-y' }}
             onTouchStart={onMediaTouchStart}
             onTouchMove={onMediaTouchMove}
             onTouchEnd={onMediaTouchEnd}
           >
+            {/* Кнопка закрытия — плавает поверх медиа, всегда видна */}
+            <button
+              onClick={onClose}
+              className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm active:bg-black/60"
+              aria-label="Закрыть"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+              </svg>
+            </button>
+
             {!current ? (
               <div className="flex h-full w-full items-center justify-center text-6xl">📦</div>
             ) : current.type === 'video' ? (
@@ -184,7 +187,7 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
             )}
 
             {product.isAvailable && product.discountPercent !== undefined && (
-              <span className="absolute right-3 top-3 rounded-lg bg-[#C8332E] px-2 py-1 text-sm font-bold text-white">
+              <span className="absolute left-3 top-3 z-10 rounded-lg bg-[#C8332E] px-2 py-1 text-sm font-bold text-white">
                 {STRINGS.discount(product.discountPercent)}
               </span>
             )}
@@ -246,8 +249,8 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
             </div>
           )}
 
-          {/* Скроллируемый контент */}
-          <div className="overflow-y-auto px-4 pb-8 pt-3">
+          {/* Скроллируемый контент — занимает всё свободное место */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4 pt-3">
             <div className="mb-1 flex items-start justify-between gap-3">
               <h2 className="text-[18px] font-bold leading-snug text-[#1A1A1A]">
                 {product.name}
@@ -280,11 +283,17 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
             )}
 
             {product.description && (
-              <p className="mb-5 text-[15px] leading-relaxed text-[#4A4A4A]">
+              <p className="text-[15px] leading-relaxed text-[#4A4A4A]">
                 {product.description}
               </p>
             )}
+          </div>
 
+          {/* Закреплённая снизу кнопка — не уезжает при длинном описании */}
+          <div
+            className="shrink-0 border-t border-[#F0EFE9] bg-white px-4 pt-3"
+            style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
             {product.isAvailable ? (
               <a
                 href={tgAvailable}
