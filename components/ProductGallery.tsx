@@ -27,7 +27,7 @@ function ProductCard({
       onClick={onClick}
       className={`cursor-pointer overflow-hidden rounded-xl border border-[#E5E5E0] bg-white transition-transform active:scale-[0.97] ${unavailable ? 'opacity-60' : ''}`}
     >
-      <div className="relative aspect-square w-full">
+      <div className="relative aspect-[4/5] w-full">
         {product.image ? (
           <Image
             src={product.image}

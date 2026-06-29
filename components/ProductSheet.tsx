@@ -12,6 +12,8 @@ type Props = {
   onClose: () => void
 }
 
+type MediaItem = { type: 'video' | 'image'; url: string }
+
 function clamp(v: number, min: number, max: number) {
   return Math.min(max, Math.max(min, v))
 }
@@ -24,11 +26,19 @@ function getTouchDistance(t: React.TouchList) {
 
 export default function ProductSheet({ product, telegram, onClose }: Props) {
   const images = product.images.length > 0 ? product.images : (product.image ? [product.image] : [])
-  const hasMany = images.length > 1
 
-  const [photoIndex, setPhotoIndex] = useState(0)
+  // Единая медиа-лента: видео идёт первым слайдом, затем фото
+  const media: MediaItem[] = [
+    ...(product.video ? [{ type: 'video' as const, url: product.video }] : []),
+    ...images.map((url) => ({ type: 'image' as const, url })),
+  ]
+  const hasMany = media.length > 1
 
-  // zoom & pan
+  const [mediaIndex, setMediaIndex] = useState(0)
+  const current: MediaItem | undefined = media[mediaIndex]
+  const isVideo = current?.type === 'video'
+
+  // zoom & pan (только для фото)
   const [scale, setScale] = useState(1)
   const [panX, setPanX] = useState(0)
   const [panY, setPanY] = useState(0)
@@ -38,31 +48,30 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
   const touchStartY = useRef(0)
   const lastTap = useRef(0)
 
-  // reset zoom when photo changes
+  // сброс зума при смене слайда
   useEffect(() => {
     setScale(1); setPanX(0); setPanY(0)
-  }, [photoIndex])
+  }, [mediaIndex])
 
-  // ── image touch: pinch zoom + photo swipe + double-tap ────────────────────
-  // Баг 3: vaul использует handleOnly={true}, поэтому drag-область только ручка.
-  // Изображение и контент НЕ захватываются vaul — здесь работают наши жесты.
+  // ── жесты медиа: pinch zoom + свайп между слайдами + double-tap ────────────
+  // vaul использует handleOnly={true} → drag-область только ручка сверху,
+  // поэтому здесь наши жесты работают без конфликта.
 
-  function onImageTouchStart(e: React.TouchEvent) {
-    if (e.touches.length === 2) {
+  function onMediaTouchStart(e: React.TouchEvent) {
+    if (!isVideo && e.touches.length === 2) {
       pinchStartDist.current = getTouchDistance(e.touches)
       pinchStartScale.current = scale
-    } else {
-      touchStartX.current = e.touches[0].clientX
-      touchStartY.current = e.touches[0].clientY
+      return
+    }
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
 
-      // double-tap → zoom toggle
+    // double-tap → зум (только для фото)
+    if (!isVideo) {
       const now = Date.now()
       if (now - lastTap.current < 300) {
-        if (scale > 1) {
-          setScale(1); setPanX(0); setPanY(0)
-        } else {
-          setScale(2.5)
-        }
+        if (scale > 1) { setScale(1); setPanX(0); setPanY(0) }
+        else { setScale(2.5) }
         lastTap.current = 0
         return
       }
@@ -70,7 +79,8 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
     }
   }
 
-  function onImageTouchMove(e: React.TouchEvent) {
+  function onMediaTouchMove(e: React.TouchEvent) {
+    if (isVideo) return
     if (e.touches.length === 2) {
       const dist = getTouchDistance(e.touches)
       const next = clamp(pinchStartScale.current * (dist / pinchStartDist.current), 1, 4)
@@ -86,13 +96,13 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
     }
   }
 
-  function onImageTouchEnd(e: React.TouchEvent) {
+  function onMediaTouchEnd(e: React.TouchEvent) {
     if (scale > 1 || !hasMany) return
     const dx = e.changedTouches[0].clientX - touchStartX.current
     const dy = e.changedTouches[0].clientY - touchStartY.current
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
-      if (dx < 0 && photoIndex < images.length - 1) setPhotoIndex((i) => i + 1)
-      if (dx > 0 && photoIndex > 0) setPhotoIndex((i) => i - 1)
+      if (dx < 0 && mediaIndex < media.length - 1) setMediaIndex((i) => i + 1)
+      if (dx > 0 && mediaIndex > 0) setMediaIndex((i) => i - 1)
     }
   }
 
@@ -105,16 +115,12 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
     `Здравствуйте! Подскажите, когда снова будет в наличии «${product.name}»?`
   )}`
 
-  const currentImage = images[photoIndex]
-
   // ── render ────────────────────────────────────────────────────────────────
 
   return (
     <Drawer.Root
       open
       onOpenChange={(open) => { if (!open) onClose() }}
-      // Баг 3: handleOnly=true — свайп-dismiss работает ТОЛЬКО с ручки сверху.
-      // Фото и контент получают свои жесты без конфликта с vaul.
       handleOnly
     >
       <Drawer.Portal>
@@ -126,7 +132,6 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
           {/* Ручка + кнопка закрытия — drag-зона для vaul */}
           <div className="relative flex items-center justify-center pb-1 pt-3 shrink-0">
             <Drawer.Handle className="h-1 w-10 rounded-full bg-[#E0E0D8]" />
-            {/* Баг 3: крестик — резервный способ закрыть без жеста */}
             <button
               onClick={onClose}
               className="absolute right-4 top-2.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#F0EFE9] text-[#6B6B6B]"
@@ -138,19 +143,33 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
             </button>
           </div>
 
-          {/* Фото — vaul НЕ перехватывает (handleOnly), наши жесты работают */}
+          {/* Медиа — вертикальный формат 4:5, фото + видео в одной карусели */}
           <div
-            className="relative aspect-square w-full shrink-0 select-none overflow-hidden bg-[#F5F5F0]"
+            className="relative aspect-[4/5] w-full shrink-0 select-none overflow-hidden bg-[#F5F5F0]"
             style={{ touchAction: scale > 1 ? 'none' : 'pan-y' }}
-            onTouchStart={onImageTouchStart}
-            onTouchMove={onImageTouchMove}
-            onTouchEnd={onImageTouchEnd}
+            onTouchStart={onMediaTouchStart}
+            onTouchMove={onMediaTouchMove}
+            onTouchEnd={onMediaTouchEnd}
           >
-            {currentImage ? (
+            {!current ? (
+              <div className="flex h-full w-full items-center justify-center text-6xl">📦</div>
+            ) : current.type === 'video' ? (
+              <video
+                key={current.url}
+                ref={(el) => { if (el) el.muted = true }} // гарантированно без звука
+                src={current.url}
+                className="h-full w-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+              />
+            ) : (
               <Image
-                key={currentImage}
-                src={currentImage}
-                alt={`${product.name} — фото ${photoIndex + 1}`}
+                key={current.url}
+                src={current.url}
+                alt={`${product.name} — ${mediaIndex + 1}`}
                 fill
                 sizes="100vw"
                 className="object-cover"
@@ -162,8 +181,6 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
                 priority
                 draggable={false}
               />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-6xl">📦</div>
             )}
 
             {product.isAvailable && product.discountPercent !== undefined && (
@@ -181,22 +198,22 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
             )}
 
             {/* Desktop arrows */}
-            {hasMany && photoIndex > 0 && (
+            {hasMany && mediaIndex > 0 && (
               <button
-                onClick={() => setPhotoIndex((i) => i - 1)}
+                onClick={() => setMediaIndex((i) => i - 1)}
                 className="absolute left-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-black/30 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/50 md:flex"
-                aria-label="Предыдущее фото"
+                aria-label="Назад"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                 </svg>
               </button>
             )}
-            {hasMany && photoIndex < images.length - 1 && (
+            {hasMany && mediaIndex < media.length - 1 && (
               <button
-                onClick={() => setPhotoIndex((i) => i + 1)}
+                onClick={() => setMediaIndex((i) => i + 1)}
                 className="absolute right-2 top-1/2 hidden -translate-y-1/2 rounded-full bg-black/30 p-1.5 text-white backdrop-blur-sm transition hover:bg-black/50 md:flex"
-                aria-label="Следующее фото"
+                aria-label="Вперёд"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
@@ -205,18 +222,26 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
             )}
           </div>
 
-          {/* Dots */}
+          {/* Точки-индикаторы (видео отмечено значком ▶) */}
           {hasMany && (
-            <div className="flex shrink-0 justify-center gap-1.5 py-2.5">
-              {images.map((_, i) => (
+            <div className="flex shrink-0 items-center justify-center gap-1.5 py-2.5">
+              {media.map((m, i) => (
                 <button
                   key={i}
-                  onClick={() => setPhotoIndex(i)}
-                  aria-label={`Фото ${i + 1}`}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === photoIndex ? 'w-4 bg-[#854F0B]' : 'w-1.5 bg-[#D0CFC8]'
+                  onClick={() => setMediaIndex(i)}
+                  aria-label={m.type === 'video' ? 'Видео' : `Фото ${i + 1}`}
+                  className={`flex items-center justify-center rounded-full transition-all ${
+                    m.type === 'video'
+                      ? `h-3 w-3 ${i === mediaIndex ? 'bg-[#854F0B] text-white' : 'bg-[#D0CFC8] text-white'}`
+                      : `h-1.5 ${i === mediaIndex ? 'w-4 bg-[#854F0B]' : 'w-1.5 bg-[#D0CFC8]'}`
                   }`}
-                />
+                >
+                  {m.type === 'video' && (
+                    <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  )}
+                </button>
               ))}
             </div>
           )}
@@ -229,7 +254,7 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
               </h2>
               {hasMany && (
                 <span className="mt-0.5 shrink-0 text-xs text-[#9A9A9A]">
-                  {photoIndex + 1} / {images.length}
+                  {mediaIndex + 1} / {media.length}
                 </span>
               )}
             </div>
@@ -254,19 +279,6 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
               </div>
             )}
 
-            {/* Короткое видео товара */}
-            {product.video && (
-              <div className="mb-4 overflow-hidden rounded-2xl bg-black">
-                <video
-                  src={product.video}
-                  className="max-h-[70svh] w-full"
-                  controls
-                  playsInline
-                  preload="metadata"
-                />
-              </div>
-            )}
-
             {product.description && (
               <p className="mb-5 text-[15px] leading-relaxed text-[#4A4A4A]">
                 {product.description}
@@ -286,7 +298,6 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
                 Написать про этот товар
               </a>
             ) : (
-              // Доп: кнопка «Спросить когда будет» с правильным текстом в Telegram
               <a
                 href={tgUnavailable}
                 target="_blank"
