@@ -27,14 +27,17 @@ function getTouchDistance(t: React.TouchList) {
 export default function ProductSheet({ product, telegram, onClose }: Props) {
   const images = product.images.length > 0 ? product.images : (product.image ? [product.image] : [])
 
-  // Единая медиа-лента: видео идёт первым слайдом, затем фото
+  // Единая медиа-лента: сначала фото (грузятся мгновенно — обложка видна
+  // сразу при открытии), видео идёт последним слайдом и подгружается, когда
+  // до него долистали.
   const media: MediaItem[] = [
-    ...(product.video ? [{ type: 'video' as const, url: product.video }] : []),
     ...images.map((url) => ({ type: 'image' as const, url })),
+    ...(product.video ? [{ type: 'video' as const, url: product.video }] : []),
   ]
   const hasMany = media.length > 1
 
   const [mediaIndex, setMediaIndex] = useState(0)
+  const [videoReady, setVideoReady] = useState(false)
   const current: MediaItem | undefined = media[mediaIndex]
   const isVideo = current?.type === 'video'
 
@@ -49,9 +52,9 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
   const lastTap = useRef(0)
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  // сброс зума при смене слайда
+  // сброс зума и состояния загрузки видео при смене слайда
   useEffect(() => {
-    setScale(1); setPanX(0); setPanY(0)
+    setScale(1); setPanX(0); setPanY(0); setVideoReady(false)
   }, [mediaIndex])
 
   // Надёжный автозапуск без звука. Атрибут muted в React применяется
@@ -179,6 +182,7 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
                 loop
                 playsInline
                 preload="auto"
+                onLoadedData={() => setVideoReady(true)}
                 onClick={() => {
                   const v = videoRef.current
                   if (!v) return
@@ -202,6 +206,13 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
                 priority
                 draggable={false}
               />
+            )}
+
+            {/* Индикатор загрузки видео — чтобы слайд не казался пустым */}
+            {isVideo && !videoReady && (
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#854F0B] border-t-transparent" />
+              </div>
             )}
 
             {product.isAvailable && product.discountPercent !== undefined && (
