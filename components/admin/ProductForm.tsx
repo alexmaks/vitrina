@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { useState, useRef } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
 const MAX_PHOTOS = 10
 
@@ -153,21 +154,51 @@ export default function ProductForm({
     const file = e.target.files?.[0]
     if (!file) return
     e.target.value = ''
+
+    const MAX_VIDEO = 50 * 1024 * 1024
+    if (file.size > MAX_VIDEO) {
+      setVideoError('Видео больше 50 МБ. Снимите ролик короче или в 1080p (Настройки телефона → Камера → Видео).')
+      return
+    }
+
+    // file.type иногда пустой — определяем по расширению
+    let contentType = file.type
+    if (!contentType) {
+      const ext = file.name.split('.').pop()?.toLowerCase()
+      contentType = ext === 'mov' ? 'video/quicktime' : ext === 'webm' ? 'video/webm' : 'video/mp4'
+    }
+
     setUploadingVideo(true)
     setVideoError('')
-    const fd = new FormData()
-    fd.append('file', file)
-    fd.append('type', 'video')
-    fd.append('productId', `${baseId.current}_video`)
     try {
-      const res = await fetch('/api/upload', { method: 'POST', body: fd })
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}))
+      // 1. Просим у сервера подписанный URL (он же проверяет тип/размер/доступ)
+      const signRes = await fetch('/api/upload/video-sign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId: `${baseId.current}_video`,
+          contentType,
+          size: file.size,
+        }),
+      })
+      if (!signRes.ok) {
+        const err = await signRes.json().catch(() => ({}))
         setVideoError(err.error ?? 'Не удалось загрузить видео')
-      } else {
-        const { url } = await res.json()
-        setVideo(url)
+        return
       }
+      const { token, path, publicUrl } = await signRes.json()
+
+      // 2. Грузим файл НАПРЯМУЮ в Storage, минуя наш сервер
+      const sb = createSupabaseBrowserClient()
+      const { error } = await sb.storage
+        .from('videos')
+        .uploadToSignedUrl(path, token, file, { contentType })
+      if (error) {
+        setVideoError('Не удалось загрузить видео')
+        return
+      }
+      // ?t= — чтобы при перезаливке не показался старый ролик из кеша
+      setVideo(`${publicUrl}?t=${Date.now()}`)
     } catch {
       setVideoError('Не удалось загрузить видео')
     } finally {
@@ -359,7 +390,8 @@ export default function ProductForm({
 
         {videoError && <p className="mt-1 text-sm text-red-500">{videoError}</p>}
         <p className="mt-1 text-xs text-[#9A9A9A]">
-          Короткое видео до 15 сек (макс. 15 МБ). Лучше формат MP4.
+          Короткое видео, до 50 МБ. Если не влезает — снимайте в 1080p
+          (Настройки телефона → Камера → Видео), так файл легче.
         </p>
       </div>
 
