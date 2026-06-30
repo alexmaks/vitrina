@@ -47,11 +47,23 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
   const lastTap = useRef(0)
+  const videoRef = useRef<HTMLVideoElement>(null)
 
   // сброс зума при смене слайда
   useEffect(() => {
     setScale(1); setPanX(0); setPanY(0)
   }, [mediaIndex])
+
+  // Надёжный автозапуск без звука. Атрибут muted в React применяется
+  // нестабильно → браузер периодически блокирует autoplay («раз через раз»).
+  // Поэтому выставляем muted и зовём play() вручную после монтирования слайда.
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v || !isVideo) return
+    v.muted = true
+    const p = v.play()
+    if (p && typeof p.catch === 'function') p.catch(() => {})
+  }, [mediaIndex, isVideo])
 
   // ── жесты медиа: pinch zoom + свайп между слайдами + double-tap ────────────
   // vaul использует handleOnly={true} → drag-область только ручка сверху,
@@ -159,7 +171,7 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
             ) : current.type === 'video' ? (
               <video
                 key={current.url}
-                ref={(el) => { if (el) el.muted = true }} // гарантированно без звука
+                ref={videoRef}
                 src={current.url}
                 className="h-full w-full object-cover"
                 autoPlay
@@ -167,6 +179,12 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
                 loop
                 playsInline
                 preload="auto"
+                onClick={() => {
+                  const v = videoRef.current
+                  if (!v) return
+                  if (v.paused) { v.muted = true; v.play().catch(() => {}) }
+                  else v.pause()
+                }}
               />
             ) : (
               <Image
