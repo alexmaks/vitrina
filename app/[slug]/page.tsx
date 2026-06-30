@@ -70,11 +70,13 @@ export default async function StorefrontPage({ params }: PageProps) {
         <ProductGallery
           products={merchant.products}
           telegram={merchant.telegram}
+          accentColor={merchant.accentColor}
         />
       </div>
       <ContactButton
         telegram={merchant.telegram}
         merchantName={merchant.name}
+        accentColor={merchant.accentColor}
       />
     </div>
   )

@@ -5,10 +5,12 @@ import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import type { Product } from '@/lib/types'
 import { STRINGS } from '@/lib/strings'
+import { readableTextColor } from '@/lib/color'
 
 type Props = {
   product: Product
   telegram: string
+  accentColor: string
   onClose: () => void
 }
 
@@ -24,7 +26,7 @@ function getTouchDistance(t: React.TouchList) {
   return Math.sqrt(dx * dx + dy * dy)
 }
 
-export default function ProductSheet({ product, telegram, onClose }: Props) {
+export default function ProductSheet({ product, telegram, accentColor, onClose }: Props) {
   const images = product.images.length > 0 ? product.images : (product.image ? [product.image] : [])
 
   // Единая медиа-лента: сначала фото (грузятся мгновенно — обложка видна
@@ -257,24 +259,26 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
           {/* Точки-индикаторы (видео отмечено значком ▶) */}
           {hasMany && (
             <div className="flex shrink-0 items-center justify-center gap-1.5 py-2.5">
-              {media.map((m, i) => (
-                <button
-                  key={i}
-                  onClick={() => setMediaIndex(i)}
-                  aria-label={m.type === 'video' ? 'Видео' : `Фото ${i + 1}`}
-                  className={`flex items-center justify-center rounded-full transition-all ${
-                    m.type === 'video'
-                      ? `h-3 w-3 ${i === mediaIndex ? 'bg-[#854F0B] text-white' : 'bg-[#D0CFC8] text-white'}`
-                      : `h-1.5 ${i === mediaIndex ? 'w-4 bg-[#854F0B]' : 'w-1.5 bg-[#D0CFC8]'}`
-                  }`}
-                >
-                  {m.type === 'video' && (
-                    <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M8 5v14l11-7z" />
-                    </svg>
-                  )}
-                </button>
-              ))}
+              {media.map((m, i) => {
+                const isActive = i === mediaIndex
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setMediaIndex(i)}
+                    aria-label={m.type === 'video' ? 'Видео' : `Фото ${i + 1}`}
+                    className={`flex items-center justify-center rounded-full text-white transition-all ${
+                      m.type === 'video' ? 'h-3 w-3' : isActive ? 'h-1.5 w-4' : 'h-1.5 w-1.5'
+                    }`}
+                    style={{ backgroundColor: isActive ? accentColor : '#D0CFC8' }}
+                  >
+                    {m.type === 'video' && (
+                      <svg width="7" height="7" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )}
 
@@ -328,7 +332,8 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
                 href={tgAvailable}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#2AABEE] font-semibold text-white active:opacity-80"
+                className="flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl font-semibold active:opacity-80"
+                style={{ backgroundColor: accentColor, color: readableTextColor(accentColor) }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.93 6.86-1.686 7.948c-.127.568-.46.707-.934.44l-2.582-1.902-1.246 1.198c-.138.138-.253.253-.519.253l.185-2.627 4.778-4.315c.208-.185-.045-.287-.322-.102L7.965 14.5l-2.54-.793c-.552-.172-.563-.552.115-.817l9.827-3.79c.46-.167.863.115.563.76z"/>

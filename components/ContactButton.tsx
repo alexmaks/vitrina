@@ -2,10 +2,12 @@
 
 import { ymReachGoal } from './YandexMetrika'
 import { STRINGS } from '@/lib/strings'
+import { readableTextColor } from '@/lib/color'
 
 interface ContactButtonProps {
   telegram: string
   merchantName: string
+  accentColor: string
 }
 
 // SVG-иконка Telegram
@@ -26,7 +28,7 @@ function TelegramIcon() {
   )
 }
 
-export default function ContactButton({ telegram, merchantName }: ContactButtonProps) {
+export default function ContactButton({ telegram, merchantName, accentColor }: ContactButtonProps) {
   const message = encodeURIComponent(STRINGS.telegramMessage)
   const href = `https://t.me/${telegram}?text=${message}`
 
@@ -46,7 +48,8 @@ export default function ContactButton({ telegram, merchantName }: ContactButtonP
         target="_blank"
         rel="noopener noreferrer"
         onClick={handleClick}
-        className="flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[#2AABEE] font-semibold text-white shadow-sm transition-opacity active:opacity-80"
+        className="flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl font-semibold shadow-sm transition-opacity active:opacity-80"
+        style={{ backgroundColor: accentColor, color: readableTextColor(accentColor) }}
         aria-label={`Написать ${merchantName} в Telegram`}
       >
         <TelegramIcon />

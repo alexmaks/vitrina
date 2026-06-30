@@ -9,7 +9,10 @@ export default function StorefrontHeader({ merchant }: StorefrontHeaderProps) {
   return (
     <header
       className="flex items-center gap-3 px-4 py-3"
-      style={{ backgroundColor: merchant.accentColor + '15' }}
+      style={{
+        backgroundColor: merchant.accentColor + '1A',
+        borderBottom: `3px solid ${merchant.accentColor}`,
+      }}
     >
       <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-black/10">
         <Image
