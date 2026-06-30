@@ -127,7 +127,7 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/50" />
 
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[92svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl outline-none"
+          className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[94svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl outline-none"
         >
           {/* Ручка — drag-зона для vaul */}
           <div className="flex items-center justify-center pb-1.5 pt-3 shrink-0">
@@ -137,7 +137,7 @@ export default function ProductSheet({ product, telegram, onClose }: Props) {
           {/* Медиа — вертикальный формат, фото + видео в одной карусели.
               Высота ограничена, чтобы описанию и кнопке оставалось место. */}
           <div
-            className="relative h-[48svh] w-full shrink-0 select-none overflow-hidden bg-[#F5F5F0]"
+            className="relative aspect-[4/5] max-h-[60svh] w-full shrink-0 select-none overflow-hidden bg-[#F5F5F0]"
             style={{ touchAction: scale > 1 ? 'none' : 'pan-y' }}
             onTouchStart={onMediaTouchStart}
             onTouchMove={onMediaTouchMove}
