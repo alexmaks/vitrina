@@ -144,7 +144,7 @@ export default function ProductSheet({ product, telegram, accentColor, onClose }
         <Drawer.Overlay className="fixed inset-0 z-40 bg-black/50" />
 
         <Drawer.Content
-          className="fixed bottom-0 left-0 right-0 z-50 flex max-h-[94svh] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl outline-none"
+          className="fixed bottom-0 left-0 right-0 z-50 mx-auto flex max-h-[94svh] max-w-[480px] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl outline-none"
         >
           {/* Ручка — drag-зона для vaul */}
           <div className="flex items-center justify-center pb-1.5 pt-3 shrink-0">
