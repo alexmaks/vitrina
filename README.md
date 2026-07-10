@@ -1,8 +1,10 @@
-# Витрина-в-кармане
+# Витрина-в-кармане / Pocket Storefront
 
-> Прототип этапа 0 (консьерж) — статическая мобильная витрина для мастеров.
+**EN:** A free, open-source (MIT) mobile storefront for independent artisans and makers anywhere in the world. A craftsperson gets a single shareable link: customers see a fast, mobile-first product catalog and message the maker directly in Telegram — no marketplace fees, no middlemen, no app to install. Current version: Next.js 16 + Supabase, with a merchant admin panel, direct-to-storage media uploads, per-merchant analytics, and a Telegram bot for onboarding. See [DOCS.md](DOCS.md) for the up-to-date architecture.
 
-Мастер делится одной ссылкой, клиент видит каталог товаров и пишет напрямую в Telegram.
+**RU:** Бесплатная open-source (MIT) мобильная витрина для мастеров и ремесленников. Мастер делится одной ссылкой, клиент видит каталог товаров и пишет напрямую в Telegram — без комиссий маркетплейсов и посредников. Актуальная версия: Next.js 16 + Supabase, админка мастера, загрузка медиа напрямую в хранилище, аналитика по витринам, Telegram-бот. Актуальная архитектура — в [DOCS.md](DOCS.md).
+
+> Ниже — описание прототипа этапа 0 (статическая версия на YAML). Оно сохранено для истории; актуальное состояние проекта см. в [DOCS.md](DOCS.md).
 
 ## Быстрый старт
 
@@ -119,3 +121,7 @@ vercel --prod
 - [ ] Кнопка «Написать мастеру» → открывает Telegram с правильным username
 - [ ] Ссылка в Telegram → превью с картинкой и описанием
 - [ ] Lighthouse Performance ≥ 95, Accessibility ≥ 95, SEO ≥ 95
+
+## License
+
+MIT — see [LICENSE](LICENSE). Free for everyone, forever.
