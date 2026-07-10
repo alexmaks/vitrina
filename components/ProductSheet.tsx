@@ -6,11 +6,13 @@ import { useEffect, useRef, useState } from 'react'
 import type { Product } from '@/lib/types'
 import { STRINGS } from '@/lib/strings'
 import { readableTextColor } from '@/lib/color'
+import { trackEvent } from '@/lib/track'
 
 type Props = {
   product: Product
   telegram: string
   accentColor: string
+  slug: string
   onClose: () => void
 }
 
@@ -26,7 +28,7 @@ function getTouchDistance(t: React.TouchList) {
   return Math.sqrt(dx * dx + dy * dy)
 }
 
-export default function ProductSheet({ product, telegram, accentColor, onClose }: Props) {
+export default function ProductSheet({ product, telegram, accentColor, slug, onClose }: Props) {
   const images = product.images.length > 0 ? product.images : (product.image ? [product.image] : [])
 
   // Единая медиа-лента: сначала фото (грузятся мгновенно — обложка видна
@@ -332,6 +334,7 @@ export default function ProductSheet({ product, telegram, accentColor, onClose }
                 href={tgAvailable}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEvent(slug, 'contact', product.id)}
                 className="flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl font-semibold active:opacity-80"
                 style={{ backgroundColor: accentColor, color: readableTextColor(accentColor) }}
               >

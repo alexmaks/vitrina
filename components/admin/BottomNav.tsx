@@ -33,6 +33,17 @@ const navItems = [
     ),
   },
   {
+    href: '/admin/stats',
+    label: 'Статистика',
+    icon: (active: boolean) => (
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="12" width="4" height="8" rx="1" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" />
+        <rect x="10" y="7" width="4" height="13" rx="1" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" />
+        <rect x="16" y="4" width="4" height="16" rx="1" fill={active ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="1.5" />
+      </svg>
+    ),
+  },
+  {
     href: '/admin/sale',
     label: 'Акция',
     icon: (active: boolean) => (

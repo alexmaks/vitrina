@@ -4,12 +4,14 @@ import { useState } from 'react'
 import Image from 'next/image'
 import type { Product, Merchant } from '@/lib/types'
 import { STRINGS } from '@/lib/strings'
+import { trackEvent } from '@/lib/track'
 import ProductSheet from './ProductSheet'
 
 type Props = {
   products: Product[]
   telegram: Merchant['telegram']
   accentColor: string
+  slug: string
 }
 
 function ProductCard({
@@ -100,8 +102,13 @@ function ProductCard({
   )
 }
 
-export default function ProductGallery({ products, telegram, accentColor }: Props) {
+export default function ProductGallery({ products, telegram, accentColor, slug }: Props) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+
+  function openProduct(index: number) {
+    setSelectedIndex(index)
+    trackEvent(slug, 'product', products[index].id)
+  }
 
   return (
     <section className="px-3 pb-4 pt-3">
@@ -116,7 +123,7 @@ export default function ProductGallery({ products, telegram, accentColor }: Prop
             key={product.id}
             product={product}
             priority={i < 2}
-            onClick={() => setSelectedIndex(i)}
+            onClick={() => openProduct(i)}
           />
         ))}
       </div>
@@ -126,6 +133,7 @@ export default function ProductGallery({ products, telegram, accentColor }: Prop
           product={products[selectedIndex]}
           telegram={telegram}
           accentColor={accentColor}
+          slug={slug}
           onClose={() => setSelectedIndex(null)}
         />
       )}

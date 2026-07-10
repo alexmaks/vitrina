@@ -5,6 +5,7 @@ import StorefrontHeader from '@/components/StorefrontHeader'
 import SaleBanner from '@/components/SaleBanner'
 import ProductGallery from '@/components/ProductGallery'
 import ContactButton from '@/components/ContactButton'
+import TrackVisit from '@/components/TrackVisit'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -64,6 +65,7 @@ export default async function StorefrontPage({ params }: PageProps) {
 
   return (
     <div className="page-container flex min-h-svh flex-col">
+      <TrackVisit slug={slug} />
       <StorefrontHeader merchant={merchant} />
       {merchant.sale?.isActive && <SaleBanner sale={merchant.sale} />}
       <div className="flex-1">
@@ -71,12 +73,14 @@ export default async function StorefrontPage({ params }: PageProps) {
           products={merchant.products}
           telegram={merchant.telegram}
           accentColor={merchant.accentColor}
+          slug={slug}
         />
       </div>
       <ContactButton
         telegram={merchant.telegram}
         merchantName={merchant.name}
         accentColor={merchant.accentColor}
+        slug={slug}
       />
     </div>
   )

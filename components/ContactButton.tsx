@@ -3,11 +3,13 @@
 import { ymReachGoal } from './YandexMetrika'
 import { STRINGS } from '@/lib/strings'
 import { readableTextColor } from '@/lib/color'
+import { trackEvent } from '@/lib/track'
 
 interface ContactButtonProps {
   telegram: string
   merchantName: string
   accentColor: string
+  slug: string
 }
 
 // SVG-иконка Telegram
@@ -28,12 +30,13 @@ function TelegramIcon() {
   )
 }
 
-export default function ContactButton({ telegram, merchantName, accentColor }: ContactButtonProps) {
+export default function ContactButton({ telegram, merchantName, accentColor, slug }: ContactButtonProps) {
   const message = encodeURIComponent(STRINGS.telegramMessage)
   const href = `https://t.me/${telegram}?text=${message}`
 
   function handleClick() {
     ymReachGoal('contact_click')
+    trackEvent(slug, 'contact')
   }
 
   return (
