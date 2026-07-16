@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 import { verifySession, SESSION_COOKIE } from '@/lib/session'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { isPlanActive } from '@/lib/plan'
 
 export async function POST(request: Request) {
   const cookieStore = await cookies()
@@ -10,6 +11,17 @@ export async function POST(request: Request) {
   const session = token ? await verifySession(token) : null
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Распродажа — Pro-фишка
+  const gate = createSupabaseAdminClient()
+  const { data: planRow } = await gate
+    .from('merchants')
+    .select('plan, plan_until')
+    .eq('id', session.merchantId)
+    .single()
+  if (!isPlanActive(planRow?.plan, planRow?.plan_until)) {
+    return NextResponse.json({ error: 'Распродажа доступна в Pro' }, { status: 403 })
   }
 
   let body: Record<string, unknown>

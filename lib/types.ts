@@ -53,6 +53,7 @@ export interface Merchant {
   avatar: string
   telegram: string
   accentColor: string
+  bgImage?: string             // картинка-фон витрины (Pro)
   sale?: Sale
   products: Product[]
 }

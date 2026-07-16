@@ -111,10 +111,31 @@ export default async function StatsPage() {
       ) : (
         <div className="flex flex-col gap-4">
           <MetricCard title="Посещения витрины" data={visits} />
-          <MetricCard title="Просмотры товаров" data={productViews} />
-          <MetricCard title="Клики «Написать»" data={contacts} />
 
-          {topProducts.length > 0 && (
+          {/* Полная статистика — Pro. События копятся и для free — при
+              переходе на Pro вся история сразу видна. */}
+          {!merchant.isPro && (
+            <a
+              href="/admin/tariff"
+              className="flex items-center gap-3 rounded-2xl border border-dashed border-[#D0CFC8] bg-[#F5F5F0] px-4 py-4"
+            >
+              <span className="text-2xl">🔒</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-[#1A1A1A]">
+                  Полная статистика — в Pro
+                </span>
+                <span className="block text-xs text-[#9A9A9A]">
+                  Просмотры товаров, топ по популярности, клики «Написать»
+                </span>
+              </span>
+              <span className="shrink-0 text-xs font-semibold text-[#854F0B]">Подробнее →</span>
+            </a>
+          )}
+
+          {merchant.isPro && <MetricCard title="Просмотры товаров" data={productViews} />}
+          {merchant.isPro && <MetricCard title="Клики «Написать»" data={contacts} />}
+
+          {merchant.isPro && topProducts.length > 0 && (
             <div className="rounded-2xl border border-[#E5E5E0] bg-white p-4">
               <p className="mb-3 text-sm font-semibold text-[#1A1A1A]">
                 Топ товаров по просмотрам

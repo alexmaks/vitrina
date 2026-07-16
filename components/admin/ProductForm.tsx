@@ -8,8 +8,6 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/browser'
 
-const MAX_PHOTOS = 10
-
 const schema = z.object({
   name: z.string().min(1, 'Введите название').max(120),
   price: z.string().min(1, 'Введите цену'),
@@ -23,6 +21,8 @@ type FormValues = z.infer<typeof schema>
 interface ProductFormProps {
   merchantId: string
   merchantSlug: string
+  maxPhotos: number      // лимит фото по тарифу (free 3 / pro 10)
+  allowVideo: boolean    // видео — только в Pro
   productId?: string
   defaultValues?: {
     name?: string
@@ -40,6 +40,8 @@ interface ProductFormProps {
 
 export default function ProductForm({
   merchantId,
+  maxPhotos,
+  allowVideo,
   productId,
   defaultValues,
   action,
@@ -254,7 +256,7 @@ export default function ProductForm({
             Фото товара
           </label>
           <span className="text-xs text-[#9A9A9A]">
-            {images.length} / {MAX_PHOTOS}
+            {images.length} / {maxPhotos}
           </span>
         </div>
 
@@ -301,7 +303,7 @@ export default function ProductForm({
           ))}
 
           {/* Слот «добавить» — если не достигнут лимит */}
-          {images.length < MAX_PHOTOS && uploadingIndex === null && (
+          {images.length < maxPhotos && uploadingIndex === null && (
             <button
               type="button"
               onClick={() => openPickerForSlot(null)}
@@ -332,7 +334,8 @@ export default function ProductForm({
         )}
       </div>
 
-      {/* ── Видео (необязательно) ────────────────────── */}
+      {/* ── Видео (необязательно; только в Pro) ──────── */}
+      {allowVideo ? (
       <div>
         <label className="mb-1.5 block text-sm font-medium text-[#1A1A1A]">
           Видео <span className="font-normal text-[#9A9A9A]">— необязательно</span>
@@ -394,6 +397,19 @@ export default function ProductForm({
           (Настройки телефона → Камера → Видео), так файл легче.
         </p>
       </div>
+      ) : (
+      <a
+        href="/admin/tariff"
+        className="flex items-center gap-3 rounded-xl border border-dashed border-[#D0CFC8] bg-[#F5F5F0] px-4 py-3"
+      >
+        <span className="text-xl">🔒</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-medium text-[#1A1A1A]">Видео товара — в Pro</span>
+          <span className="block text-xs text-[#9A9A9A]">Короткий ролик в карточке товара</span>
+        </span>
+        <span className="shrink-0 text-xs font-semibold text-[#854F0B]">Подробнее →</span>
+      </a>
+      )}
 
       {/* ── Название ─────────────────────────────────── */}
       <div>

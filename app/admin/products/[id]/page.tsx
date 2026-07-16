@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import ProductForm from '@/components/admin/ProductForm'
 import { getMerchantAdminData } from '@/lib/merchants-db'
+import { FREE_LIMITS, PRO_LIMITS } from '@/lib/plan'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -27,23 +28,29 @@ async function updateProduct(formData: FormData) {
   const discountRaw = formData.get('discountPercent') as string
   const discountPercent = discountRaw ? parseInt(discountRaw, 10) : null
   const isAvailable = formData.get('isAvailable') === 'true'
+  // Тариф: на free режем фото до лимита и не принимаем видео
+  // (существующее видео у товара при этом не трогаем).
+  const limits = merchant?.isPro ? PRO_LIMITS : FREE_LIMITS
   const imageUrlsRaw = (formData.get('imageUrls') as string) || '[]'
-  const imageUrls: string[] = JSON.parse(imageUrlsRaw)
+  const imageUrls: string[] = (JSON.parse(imageUrlsRaw) as string[]).slice(0, limits.maxPhotos)
   const imageUrl = imageUrls[0] ?? null
-  const videoUrl = (formData.get('videoUrl') as string) || null
+
+  const update: Record<string, unknown> = {
+    name,
+    price,
+    description,
+    discount_percent: discountPercent,
+    is_available: isAvailable,
+    image_url: imageUrl,
+    image_urls: imageUrls,
+  }
+  if (merchant?.isPro) {
+    update.video_url = (formData.get('videoUrl') as string) || null
+  }
 
   await supabase
     .from('products')
-    .update({
-      name,
-      price,
-      description,
-      discount_percent: discountPercent,
-      is_available: isAvailable,
-      image_url: imageUrl,
-      image_urls: imageUrls,
-      video_url: videoUrl,
-    } as Record<string, unknown>)
+    .update(update)
     .eq('id', productId)
     .eq('merchant_id', session.merchantId)
 
@@ -153,6 +160,8 @@ export default async function EditProductPage({ params }: PageProps) {
       <ProductForm
         merchantId={session.merchantId}
         merchantSlug={merchant.slug}
+        maxPhotos={merchant.isPro ? PRO_LIMITS.maxPhotos : FREE_LIMITS.maxPhotos}
+        allowVideo={merchant.isPro}
         productId={id}
         defaultValues={{
           name: product.name,

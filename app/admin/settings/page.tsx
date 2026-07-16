@@ -32,10 +32,15 @@ export default function SettingsPage() {
   const [avatar, setAvatar] = useState(merchant.avatar ?? '')
   const [uploadingAvatar, setUploadingAvatar] = useState(false)
   const [avatarError, setAvatarError] = useState('')
+  const [bgImage, setBgImage] = useState(merchant.bgImage ?? '')
+  const [uploadingBg, setUploadingBg] = useState(false)
+  const [bgError, setBgError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+  const bgFileRef = useRef<HTMLInputElement>(null)
+  const isPro = merchant.isPro
 
   const { register, handleSubmit, watch, setValue } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -74,6 +79,32 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleBgChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setUploadingBg(true)
+    setBgError('')
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('type', 'background')
+    try {
+      const res = await fetch('/api/upload', { method: 'POST', body: fd })
+      if (res.ok) {
+        const { url } = await res.json()
+        // ?t= — сбрасываем кеш при замене фона (путь файла одинаковый)
+        setBgImage(`${url}?t=${Date.now()}`)
+      } else {
+        const err = await res.json().catch(() => ({}))
+        setBgError(err.error ?? 'Не удалось загрузить фон')
+      }
+    } catch {
+      setBgError('Не удалось загрузить фон')
+    } finally {
+      setUploadingBg(false)
+    }
+  }
+
   async function onSubmit(values: FormValues) {
     setSaving(true)
     setError('')
@@ -81,7 +112,7 @@ export default function SettingsPage() {
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...values, avatarUrl: avatar }),
+        body: JSON.stringify({ ...values, avatarUrl: avatar, bgImageUrl: bgImage }),
       })
       if (res.ok) {
         setSaved(true)
@@ -98,7 +129,28 @@ export default function SettingsPage() {
 
   return (
     <div className="px-5 py-6">
-      <h1 className="mb-6 text-xl font-bold text-[#1A1A1A]">Настройки</h1>
+      <h1 className="mb-4 text-xl font-bold text-[#1A1A1A]">Настройки</h1>
+
+      {/* Тариф */}
+      <a
+        href="/admin/tariff"
+        className="mb-6 flex items-center justify-between rounded-2xl border border-[#E5E5E0] bg-white px-4 py-3.5"
+      >
+        <div>
+          <p className="text-sm font-semibold text-[#1A1A1A]">
+            Тариф:{' '}
+            {isPro ? (
+              <span className="text-[#854F0B]">Pro ✦</span>
+            ) : (
+              <span className="text-[#6B6B6B]">Бесплатный</span>
+            )}
+          </p>
+          <p className="text-xs text-[#9A9A9A]">
+            {isPro ? 'Все возможности открыты' : 'Видео, статистика, свой стиль — в Pro'}
+          </p>
+        </div>
+        <span className="text-sm font-semibold text-[#854F0B]">Подробнее →</span>
+      </a>
 
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5">
         {/* Аватар */}
@@ -166,16 +218,18 @@ export default function SettingsPage() {
           />
         </div>
 
-        {/* Цвет акцента */}
+        {/* Цвет акцента — Pro */}
         <div>
           <label className="mb-2 block text-sm font-medium text-[#1A1A1A]">
             Цвет оформления
+            {!isPro && <span className="ml-2 text-xs font-normal text-[#854F0B]">Pro</span>}
           </label>
-          <div className="flex gap-3">
+          <div className={`flex gap-3 ${!isPro ? 'pointer-events-none opacity-40' : ''}`}>
             {ACCENT_COLORS.map((color) => (
               <button
                 key={color.value}
                 type="button"
+                disabled={!isPro}
                 onClick={() => setValue('accentColor', color.value)}
                 className="h-9 w-9 rounded-full transition-transform active:scale-95"
                 style={{ backgroundColor: color.value }}
@@ -190,6 +244,82 @@ export default function SettingsPage() {
               </button>
             ))}
           </div>
+          {!isPro && (
+            <a href="/admin/tariff" className="mt-2 block text-xs text-[#854F0B] underline underline-offset-2">
+              Свой цвет оформления — в Pro →
+            </a>
+          )}
+        </div>
+
+        {/* Фон витрины — Pro */}
+        <div>
+          <label className="mb-2 block text-sm font-medium text-[#1A1A1A]">
+            Фон витрины
+            {!isPro && <span className="ml-2 text-xs font-normal text-[#854F0B]">Pro</span>}
+          </label>
+          {isPro ? (
+            <>
+              <div className="flex items-center gap-4">
+                <div
+                  onClick={() => bgFileRef.current?.click()}
+                  className="relative h-16 w-24 cursor-pointer overflow-hidden rounded-xl border-2 border-[#E5E5E0] bg-[#F5F5F0]"
+                >
+                  {bgImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={bgImage} alt="Фон витрины" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-xl text-[#9A9A9A]">🖼️</div>
+                  )}
+                  {uploadingBg && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1">
+                  <button
+                    type="button"
+                    onClick={() => bgFileRef.current?.click()}
+                    className="text-left text-sm text-[#854F0B] underline underline-offset-2"
+                  >
+                    {bgImage ? 'Заменить фон' : 'Загрузить фон'}
+                  </button>
+                  {bgImage && (
+                    <button
+                      type="button"
+                      onClick={() => setBgImage('')}
+                      className="text-left text-sm text-[#9A9A9A] underline underline-offset-2"
+                    >
+                      Убрать фон
+                    </button>
+                  )}
+                </div>
+                <input
+                  ref={bgFileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={handleBgChange}
+                />
+              </div>
+              {bgError && <p className="mt-2 text-sm text-red-500">{bgError}</p>}
+              <p className="mt-1.5 text-xs text-[#9A9A9A]">
+                Показывается лёгкой подложкой за товарами. Лучше спокойное фото без мелких деталей.
+              </p>
+            </>
+          ) : (
+            <a
+              href="/admin/tariff"
+              className="flex items-center gap-3 rounded-xl border border-dashed border-[#D0CFC8] bg-[#F5F5F0] px-4 py-3"
+            >
+              <span className="text-xl">🔒</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-[#1A1A1A]">Своя картинка-фон — в Pro</span>
+                <span className="block text-xs text-[#9A9A9A]">Витрина с вашей атмосферой</span>
+              </span>
+              <span className="shrink-0 text-xs font-semibold text-[#854F0B]">Подробнее →</span>
+            </a>
+          )}
         </div>
 
         {/* Telegram */}

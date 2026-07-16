@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from './supabase/server'
+import { isPlanActive } from './plan'
 import type { Merchant, Product, Sale } from './types'
 
 const DEFAULT_ACCENT_COLOR = '#854F0B'
@@ -28,6 +29,9 @@ interface MerchantRow {
   telegram_id: number
   contact_telegram: string
   accent_color: string | null
+  bg_image_url: string | null
+  plan: string | null
+  plan_until: string | null
   sale_percent: number | null
   sale_until: string | null
   sale_text: string | null
@@ -46,7 +50,11 @@ function isSaleActive(until: string | null): boolean {
 }
 
 function mapRow(row: MerchantRow): Merchant {
-  const saleActive = row.sale_percent
+  // Тариф: Pro-фишки (распродажа, свой цвет, фон) действуют только пока
+  // план активен. У free-мастера витрина откатывается к стандартному виду.
+  const pro = isPlanActive(row.plan, row.plan_until)
+
+  const saleActive = pro && row.sale_percent
     ? isSaleActive(row.sale_until)
     : false
 
@@ -101,7 +109,9 @@ function mapRow(row: MerchantRow): Merchant {
     tagline: row.tagline ?? '',
     avatar: row.avatar_url ?? '',
     telegram: row.contact_telegram,
-    accentColor: row.accent_color ?? DEFAULT_ACCENT_COLOR,
+    // Свой цвет и фон — Pro-фишки; на free показываем стандартный вид
+    accentColor: pro ? (row.accent_color ?? DEFAULT_ACCENT_COLOR) : DEFAULT_ACCENT_COLOR,
+    bgImage: pro ? (row.bg_image_url ?? undefined) : undefined,
     sale,
     products,
   }
@@ -120,7 +130,8 @@ export async function getMerchantBySlug(slug: string): Promise<Merchant | null> 
     .from('merchants')
     .select(`
       id, slug, name, tagline, avatar_url, contact_telegram,
-      accent_color, sale_percent, sale_until, sale_text, is_published,
+      accent_color, bg_image_url, plan, plan_until,
+      sale_percent, sale_until, sale_text, is_published,
       products (
         id, name, price, image_url, image_urls, video_url, description,
         discount_percent, is_available, sort_order
@@ -156,7 +167,8 @@ export async function getMerchantForAdmin(merchantId: string): Promise<Merchant 
     .from('merchants')
     .select(`
       id, slug, name, tagline, avatar_url, contact_telegram,
-      accent_color, sale_percent, sale_until, sale_text, is_published,
+      accent_color, bg_image_url, plan, plan_until,
+      sale_percent, sale_until, sale_text, is_published,
       products (
         id, name, price, image_url, image_urls, video_url, description,
         discount_percent, is_available, sort_order
@@ -173,6 +185,7 @@ export async function getMerchantForAdmin(merchantId: string): Promise<Merchant 
 export interface MerchantAdmin extends Merchant {
   id: string
   isPublished: boolean
+  isPro: boolean
 }
 
 export async function getMerchantAdminData(merchantId: string): Promise<MerchantAdmin | null> {
@@ -182,7 +195,8 @@ export async function getMerchantAdminData(merchantId: string): Promise<Merchant
     .from('merchants')
     .select(`
       id, slug, name, tagline, avatar_url, contact_telegram,
-      accent_color, sale_percent, sale_until, sale_text, is_published,
+      accent_color, bg_image_url, plan, plan_until,
+      sale_percent, sale_until, sale_text, is_published,
       products (
         id, name, price, image_url, image_urls, video_url, description,
         discount_percent, is_available, sort_order
@@ -192,10 +206,12 @@ export async function getMerchantAdminData(merchantId: string): Promise<Merchant
     .single()
 
   if (error || !data) return null
-  const merchant = mapRow(data as MerchantRow)
+  const row = data as MerchantRow
+  const merchant = mapRow(row)
   return {
     ...merchant,
-    id: (data as MerchantRow).id,
-    isPublished: (data as MerchantRow).is_published,
+    id: row.id,
+    isPublished: row.is_published,
+    isPro: isPlanActive(row.plan, row.plan_until),
   }
 }

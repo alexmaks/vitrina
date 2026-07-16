@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifySession, SESSION_COOKIE } from '@/lib/session'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { isPlanActive } from '@/lib/plan'
 
 // Подписанный URL для ПРЯМОЙ загрузки видео в Storage из браузера.
 // Так тяжёлые файлы (4K с телефона) не идут через нашу функцию и не упираются
@@ -20,6 +21,17 @@ export async function POST(request: Request) {
   const session = token ? await verifySession(token) : null
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // Видео — Pro-фишка
+  const supabaseGate = createSupabaseAdminClient()
+  const { data: planRow } = await supabaseGate
+    .from('merchants')
+    .select('plan, plan_until')
+    .eq('id', session.merchantId)
+    .single()
+  if (!isPlanActive(planRow?.plan, planRow?.plan_until)) {
+    return NextResponse.json({ error: 'Видео товара доступно в Pro' }, { status: 403 })
   }
 
   let body: { productId?: string; contentType?: string; size?: number }

@@ -4,6 +4,7 @@ import { verifySession, SESSION_COOKIE } from '@/lib/session'
 import { getMerchantAdminData } from '@/lib/merchants-db'
 import { redirect } from 'next/navigation'
 import Image from 'next/image'
+import { FREE_LIMITS } from '@/lib/plan'
 
 export default async function ProductsPage() {
   const cookieStore = await cookies()
@@ -15,13 +16,21 @@ export default async function ProductsPage() {
   if (!merchant) redirect('/login')
 
   const products = merchant.products
+  const atLimit = !merchant.isPro && products.length >= FREE_LIMITS.maxProducts
 
   return (
     <div className="px-5 py-6">
       {/* Заголовок */}
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#1A1A1A]">Товары</h1>
+          <h1 className="text-xl font-bold text-[#1A1A1A]">
+            Товары
+            {!merchant.isPro && (
+              <span className="ml-2 text-sm font-normal text-[#9A9A9A]">
+                {products.length} / {FREE_LIMITS.maxProducts}
+              </span>
+            )}
+          </h1>
           {merchant.slug && (
             <a
               href={`/${merchant.slug}`}
@@ -33,14 +42,33 @@ export default async function ProductsPage() {
             </a>
           )}
         </div>
-        <Link
-          href="/admin/products/new"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-[#854F0B] text-2xl font-light text-white shadow-md transition-transform active:scale-95"
-          aria-label="Добавить товар"
-        >
-          +
-        </Link>
+        {atLimit ? (
+          <Link
+            href="/admin/tariff"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#E5E5E0] text-lg text-[#9A9A9A]"
+            aria-label="Лимит товаров — подробнее о Pro"
+          >
+            🔒
+          </Link>
+        ) : (
+          <Link
+            href="/admin/products/new"
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-[#854F0B] text-2xl font-light text-white shadow-md transition-transform active:scale-95"
+            aria-label="Добавить товар"
+          >
+            +
+          </Link>
+        )}
       </div>
+
+      {atLimit && (
+        <Link
+          href="/admin/tariff"
+          className="mb-4 flex items-center gap-2 rounded-xl border border-[#F0E6D2] bg-[#FBF7EE] px-4 py-3 text-sm text-[#854F0B]"
+        >
+          Достигнут лимит бесплатного тарифа. В Pro — без ограничений →
+        </Link>
+      )}
 
       {products.length === 0 ? (
         <div className="mt-16 text-center">

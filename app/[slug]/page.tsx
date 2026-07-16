@@ -63,8 +63,19 @@ export default async function StorefrontPage({ params }: PageProps) {
     notFound()
   }
 
+  // Pro: своя картинка-фон — кладём под контент с белой вуалью,
+  // чтобы товары и текст оставались читаемыми
+  const bgStyle = merchant.bgImage
+    ? {
+        backgroundImage: `linear-gradient(rgba(250,250,247,0.86), rgba(250,250,247,0.86)), url(${merchant.bgImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed' as const,
+      }
+    : undefined
+
   return (
-    <div className="page-container flex min-h-svh flex-col">
+    <div className="page-container flex min-h-svh flex-col" style={bgStyle}>
       <TrackVisit slug={slug} />
       <StorefrontHeader merchant={merchant} />
       {merchant.sale?.isActive && <SaleBanner sale={merchant.sale} />}

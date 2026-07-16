@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifySession, SESSION_COOKIE } from '@/lib/session'
 import { createSupabaseAdminClient } from '@/lib/supabase/admin'
+import { isPlanActive } from '@/lib/plan'
 import sharp from 'sharp'
 
 // Magic bytes для проверки типа файла
@@ -51,8 +52,21 @@ export async function POST(request: Request) {
   }
 
   const file = formData.get('file') as File | null
-  const type = (formData.get('type') as string) ?? 'product' // 'avatar' | 'product'
+  const type = (formData.get('type') as string) ?? 'product' // 'avatar' | 'product' | 'video' | 'background'
   const productId = (formData.get('productId') as string) ?? 'new'
+
+  // Фон витрины — Pro-фишка, проверяем тариф на сервере
+  if (type === 'background') {
+    const sb = createSupabaseAdminClient()
+    const { data: planRow } = await sb
+      .from('merchants')
+      .select('plan, plan_until')
+      .eq('id', session.merchantId)
+      .single()
+    if (!isPlanActive(planRow?.plan, planRow?.plan_until)) {
+      return NextResponse.json({ error: 'Фон витрины доступен в Pro' }, { status: 403 })
+    }
+  }
 
   if (!file) {
     return NextResponse.json({ error: 'No file provided' }, { status: 400 })
@@ -108,12 +122,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unsupported file type' }, { status: 415 })
   }
 
-  // Конвертируем через Sharp: 1080×1080 WebP quality 80
+  // Конвертируем через Sharp в WebP: фон крупнее (1600), остальное 1080²
+  const maxDim = type === 'background' ? 1600 : 1080
   let processed: Buffer
   try {
     processed = await sharp(buffer)
       .rotate() // авто-поворот по EXIF — иначе фото с iPhone уезжают набок
-      .resize(1080, 1080, { fit: 'inside', withoutEnlargement: true })
+      .resize(maxDim, maxDim, { fit: 'inside', withoutEnlargement: true })
       .webp({ quality: 80 })
       .toBuffer()
   } catch {
@@ -125,8 +140,10 @@ export async function POST(request: Request) {
   const storagePath =
     type === 'avatar'
       ? `avatars/${merchantId}.webp`
-      : `products/${merchantId}/${productId}.webp`
-  const bucket = type === 'avatar' ? 'avatars' : 'products'
+      : type === 'background'
+        ? `backgrounds/${merchantId}.webp`
+        : `products/${merchantId}/${productId}.webp`
+  const bucket = type === 'avatar' || type === 'background' ? 'avatars' : 'products'
 
   const supabase = createSupabaseAdminClient()
   const { error: uploadError } = await supabase.storage

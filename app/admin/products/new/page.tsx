@@ -5,6 +5,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import ProductForm from '@/components/admin/ProductForm'
 import { getMerchantAdminData } from '@/lib/merchants-db'
+import { FREE_LIMITS, PRO_LIMITS } from '@/lib/plan'
 
 async function createProduct(formData: FormData) {
   'use server'
@@ -16,6 +17,13 @@ async function createProduct(formData: FormData) {
   const supabase = createSupabaseAdminClient()
   const merchant = await getMerchantAdminData(session.merchantId)
 
+  // Тариф: на free — не больше лимита товаров, 3 фото, без видео.
+  // Сервер решает; клиентские замки — только удобство.
+  const limits = merchant?.isPro ? PRO_LIMITS : FREE_LIMITS
+  if ((merchant?.products.length ?? 0) >= limits.maxProducts) {
+    redirect('/admin/products')
+  }
+
   const name = formData.get('name') as string
   const price = parseInt(formData.get('price') as string, 10)
   const description = (formData.get('description') as string) || null
@@ -23,9 +31,9 @@ async function createProduct(formData: FormData) {
   const discountPercent = discountRaw ? parseInt(discountRaw, 10) : null
   const isAvailable = formData.get('isAvailable') === 'true'
   const imageUrlsRaw = (formData.get('imageUrls') as string) || '[]'
-  const imageUrls: string[] = JSON.parse(imageUrlsRaw)
+  const imageUrls: string[] = (JSON.parse(imageUrlsRaw) as string[]).slice(0, limits.maxPhotos)
   const imageUrl = imageUrls[0] ?? null
-  const videoUrl = (formData.get('videoUrl') as string) || null
+  const videoUrl = merchant?.isPro ? ((formData.get('videoUrl') as string) || null) : null
 
   await supabase.from('products').insert({
     merchant_id: session.merchantId,
@@ -57,6 +65,9 @@ export default async function NewProductPage() {
   const merchant = await getMerchantAdminData(session.merchantId)
   if (!merchant) redirect('/login')
 
+  const limits = merchant.isPro ? PRO_LIMITS : FREE_LIMITS
+  const atLimit = merchant.products.length >= limits.maxProducts
+
   return (
     <div className="px-5 py-6">
       <div className="mb-6 flex items-center gap-3">
@@ -68,11 +79,31 @@ export default async function NewProductPage() {
         <h1 className="text-xl font-bold text-[#1A1A1A]">Новый товар</h1>
       </div>
 
-      <ProductForm
-        merchantId={session.merchantId}
-        merchantSlug={merchant.slug}
-        action={createProduct}
-      />
+      {atLimit ? (
+        <div className="mt-10 text-center">
+          <div className="mb-4 text-5xl">🔒</div>
+          <p className="mb-2 font-semibold text-[#1A1A1A]">
+            Лимит бесплатного тарифа — {FREE_LIMITS.maxProducts} товаров
+          </p>
+          <p className="mb-6 text-sm text-[#9A9A9A]">
+            В Pro количество товаров не ограничено.
+          </p>
+          <a
+            href="/admin/tariff"
+            className="inline-flex min-h-[48px] items-center rounded-2xl bg-[#854F0B] px-6 font-semibold text-white"
+          >
+            Подробнее о Pro
+          </a>
+        </div>
+      ) : (
+        <ProductForm
+          merchantId={session.merchantId}
+          merchantSlug={merchant.slug}
+          maxPhotos={limits.maxPhotos}
+          allowVideo={merchant.isPro}
+          action={createProduct}
+        />
+      )}
     </div>
   )
 }

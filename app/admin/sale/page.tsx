@@ -34,6 +34,28 @@ export default function SalePage() {
 
   const saleActive = watch('saleActive')
 
+  // Распродажа — Pro-фишка
+  if (!merchant.isPro) {
+    return (
+      <div className="px-5 py-6">
+        <h1 className="mb-6 text-xl font-bold text-[#1A1A1A]">Распродажа</h1>
+        <div className="mt-10 text-center">
+          <div className="mb-4 text-5xl">🔒</div>
+          <p className="mb-2 font-semibold text-[#1A1A1A]">Распродажа — в Pro</p>
+          <p className="mb-6 text-sm text-[#9A9A9A]">
+            Баннер со скидкой на всю витрину и автоматический пересчёт цен.
+          </p>
+          <a
+            href="/admin/tariff"
+            className="inline-flex min-h-[48px] items-center rounded-2xl bg-[#854F0B] px-6 font-semibold text-white"
+          >
+            Подробнее о Pro
+          </a>
+        </div>
+      </div>
+    )
+  }
+
   async function onSubmit(values: FormValues) {
     setSaving(true)
     try {
